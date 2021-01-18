@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+</head>
+
+<body>
+
+
+<div class="container">
+    <div class="row">
+        <%for(const group of groups){%>
+      <div class="col-sm">
+        <form action="/deleteGroup" method="post">
+            <input type="text" value=<%=group._id%> name="groupId" style="display:none">
+            <%=group.groupName%> : <%=group.groupQuantity%> <br>
+            Free Periods(for the group) <br>
+            <%for(const busyPeriod of group.unAvialability){%>
+            <%="D" + String(Math.floor(busyPeriod / periodsPerDay)+1) + "P" + String((busyPeriod % periodsPerDay) + 1)%>
+            and <%}%> <br>
+            <button type="submit">Delete this Group</button>
+        </form>
+      </div>
+
+    <%}%>
+    </div>
+  </div>
+        <br><br>
+        <form action="/addGroup" method="post">
+            Group Name
+            <input type="text" name="groupName" required>
+            Number of Students in the group
+            <input type="number" name="groupQuantity" required> <br> <br>
+            Add the periods the groups have free. <br>
+            <%for(let day =0 ; day < numberOfDays ; day++){%>
+            Day <%=day+1%> : <% for(let period=0 ; period < periodsPerDay ; period++){ %>
+            <input type="checkbox" name=<%="periodTaken" + String(day*periodsPerDay + (period))%>
+                id=<%="periodTaken" + String(day*periodsPerDay + (period))%>>
+            <label for=<%="periodTaken" + String(day*periodsPerDay + (period))%>> <%="Period "+String(period+1)%>
+            </label>
+            <%}%> <br> <%}%>
+            <button type="submit">Add this Group</button>
+        </form>
+        <br><br>
+        Done with Groups. Then move onto the next <a href="/getRoom">step</a>.
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Period</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+</head>
+
+<body>
+
+
+
+    <div class="container">
+        <div class="row">
+            <%for(const period of periods){%>
+            <div class="col-sm">
+                <h3>Period name : <%=period.periodName%></h3> <br>
+                Parent Course : <%=period.parentCourse%> <br>
+                Professor : <%=period.profTaking%> <br>
+                Period Length = <%=period.periodLength%> <br>
+                Period Frequency : <%=period.periodFrequency%> <br>
+                Groups Attending : <%for(const group of period.groupsAttending){%> <%=group%>, <%}%> <br>
+            Potential Rooms :  <%for(const room of period.potentialRooms){%> <%=room%>, <%}%> <br>
+            Preference : <%=period.preference%> <br>
+                <a href=<%="/deletePeriod/"+period._id%>>Delete</a> this period. <br> <br>
+            </div>
+            <%}%>
+    </div>
+  </div>
+
+            <br> <br> <br>
+
+            <a href="/getCourse">Goto</a> course page.
+
+            <br> <br>
+            <form action="/addPeriod" method="post">
+                <input type="text" value=<%=courseId%> name="courseId" style="display:none">
+                Enter period Name
+                <input type="text" name="periodName" required> <br>
+                Select all the groups that need to be present during this period.
+                <%for(const group of taughtTo){%>
+                <input type="checkbox" name=<%=group._id%> id=<%=group._id%>>
+                <label for=<%=group._id%>> <%=group.groupName%> </label>
+                <%}%> <br> <br>
+            
+        
+        Select all the rooms where the period can take place:
+            <%for(const room of rooms){%>
+                <input type="checkbox" name=<%=room._id%> id=<%=room._id%>>
+                <label for=<%=room._id%> style="padding:0.45rem;" >   <%="    "+room.roomName+"    "%></label>
+                <%}%> <br> <br>
+        
+        
+        Select the professor who's gonna take the period.
+        <select name="profId" id="profId">
+            <%for(const prof of taughtBy){%>
+                <option value=<%=prof._id%>> <%=prof.profName%> </option>
+                <%}%>
+          </select> <br> <br>
+
+          <div>
+            Set the time at which this period must happen? <b>This feature only works if the period frequency is one.</b>
+            <input type="checkbox" name="specifyTime" value="true"> <br>
+            Day Starting at 1 & ending at <%=numberOfDays%>: <input type="number" min="1" max=<%=numberOfDays%>
+                    name="timeSpeicifiedDay"> <br>
+                Period Starting at 1 & ending at <%=periodsPerDay%>: <input type="number" min="1" max=<%=periodsPerDay%>
+                    name="timeSpeicifiedPeriod"> <br>
+        </div>
+        <br> <br>
+
+
+        Set the time at which this period must not happen?
+        <div id="antiTimeOptions">
+            <%for(let day =0 ; day < numberOfDays ; day++){%>
+            Day <%=day+1%> : <% for(let period=0 ; period < periodsPerDay ; period++){ %>
+            <input type="checkbox" name=<%="antiTimeSpecified" + String(day*periodsPerDay + (period))%>
+                id=<%="antiTimeSpeicified" + String(day*periodsPerDay + (period))%>>
+            <label for=<%="antiTimeSpeicified" + String(day*periodsPerDay + (period))%>> <%="Period "+String(period+1)%>
+            </label>
+            <%}%> <br> <%}%>
+        </div>
+    </div> <br> <br>
+
+    Enter the number of hours this class will last.<input type="number" name="periodLength" require min="1"> <br>
+    Enter the frequency of this period per week. <input type="number" name="periodFrequency" required min="1"> <br>
+    <button type="submit">Submit</button>
+    </form>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous">
+</script>
+
+</html>

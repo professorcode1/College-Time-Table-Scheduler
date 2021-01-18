@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="row">
+            <%for(const course of courseDisplay){%>
+            <div class="col-md-4">
+
+
+                <form action="/deleteCourse" method="post">
+                    <input type="text" value=<%=course._id%> name="courseId" style="display:none">
+                    <h2>Course Name : <%= course.courseName%>.</h2> <br>
+                    Taught by : <%for(const prof of course.taughtBy){%> <%=prof%> , <%}%> <br>
+                    Taught to : <%for(const group of course.taughtTo){%> <%=group%> , <%}%> <br>
+                    <a href=<%="/updateCourse/" + course._id%> >Click here</a> to edit the course. <br>
+                    <a href=<%="/getPeriod/"+String(course._id)%>>Click here</a> to create/delete/view periods of the
+                    course. <br> <br> <br>
+                    <button type="submit">Delete this Course</button>
+                </form>
+
+
+            </div> 
+            <%}%>
+</div>
+<br>
+<br>
+Goto the <a href="/">start</a>
+<br><br>
+</div>
+        <br><br>
+        <form action="/addCourse" method="post">
+
+            Course Name
+            <input type="text" name="courseName" required><br>
+
+            Select the profs who teach/tut/ are just involved
+            <%for(const prof of profs){%>
+            <input type="checkbox" name=<%=prof._id%> id=<%=prof._id%>>
+            <label for=<%=prof._id%>> <%=prof.profName%> </label>
+            <%}%> <br> <br>
+
+            Select the groups who study this course
+            <%for(const group of groups){%>
+            <input type="checkbox" name=<%=group._id%> id=<%=group._id%>>
+            <label for=<%=group._id%>> <%=group.groupName%> </label>
+            <%}%> <br> <br>
+            <h2>Fill the below 3 boxes with 0 if you don't wanna use the standard template. </h2>
+            Select the number of Lectures for this course. <input type="number" required min="0" name="numberOfLectures"> <br>
+            Select the number of Tutorials for this course. <input type="number" required min="0" name="numberOfTutorials"> <br>
+            Select the number of Labs for this course. <input type="number" required min="0" name="numberOfLabs"> <br>
+
+            <button type="submit">Add this Course</button>
+        </form>
+        <br><br>
+        Done with Courses. Then move onto the next <a href="/">step</a>.
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+
+</html>

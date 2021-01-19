@@ -23,7 +23,7 @@
                 Period Length = <%=period.periodLength%> <br>
                 Period Frequency : <%=period.periodFrequency%> <br>
                 Groups Attending : <%for(const group of period.groupsAttending){%> <%=group%>, <%}%> <br>
-            Potential Rooms :  <%for(const room of period.potentialRooms){%> <%=room%>, <%}%> <br>
+            Room :  <%=period.roomUsed%>,<br>
             Preference : <%=period.preference%> <br>
                 <a href=<%="/deletePeriod/"+period._id%>>Delete</a> this period. <br> <br>
             </div>
@@ -47,11 +47,12 @@
                 <%}%> <br> <br>
             
         
-        Select all the rooms where the period can take place:
+        Select the rooms where the period will take place:
+        <select name="roomId" id="roomId">
             <%for(const room of rooms){%>
-                <input type="checkbox" name=<%=room._id%> id=<%=room._id%>>
-                <label for=<%=room._id%> style="padding:0.45rem;" >   <%="    "+room.roomName+"    "%></label>
-                <%}%> <br> <br>
+                <option value=<%=room._id%>> <%=room.roomName%> </option>
+                <%}%> 
+        </select><br> <br>
         
         
         Select the professor who's gonna take the period.

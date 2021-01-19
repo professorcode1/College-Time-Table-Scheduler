@@ -17,19 +17,13 @@
             <%for(const course of courseDisplay){%>
             <div class="col-md-4">
 
-
-                <form action="/deleteCourse" method="post">
-                    <input type="text" value=<%=course._id%> name="courseId" style="display:none">
                     <h2>Course Name : <%= course.courseName%>.</h2> <br>
                     Taught by : <%for(const prof of course.taughtBy){%> <%=prof%> , <%}%> <br>
                     Taught to : <%for(const group of course.taughtTo){%> <%=group%> , <%}%> <br>
                     <a href=<%="/updateCourse/" + course._id%> >Click here</a> to edit the course. <br>
                     <a href=<%="/getPeriod/"+String(course._id)%>>Click here</a> to create/delete/view periods of the
                     course. <br> <br> <br>
-                    <button type="submit">Delete this Course</button>
-                </form>
-
-
+                    <a href="/deleteCourse/<%=course._id%>"><button type="submit">Delete this Course</button></a>
             </div> 
             <%}%>
 </div>

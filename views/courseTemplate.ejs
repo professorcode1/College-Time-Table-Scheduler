@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Period</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+</head>
+
+<body>
+
+    <a href="/getCourse">Goto</a> course page.
+
+    <br> <br>
+    <form action="/courseTemplate" method="post">
+
+        <input type="text" value=<%=courseId%> name="courseId" style="display:none">
+        <input type="text" value=<%=numberOfLectures%> name="numberOfLectures" style="display:none">
+        <input type="text" value=<%=numberOfTutorials%> name="numberOfTutorials" style="display:none">
+        <input type="text" value=<%=numberOfLabs%> name="numberOfLabs" style="display:none">
+        <div>
+            <h1>Lecture</h1>
+            Lecture : For <%for(const group of taughtTo){%> <%=group.groupName%>, <%}%> : Frequency <%=numberOfLectures%> <br>
+            Enter the length of lecture:<input type="number" name="lecture[periodLength]" required min="1"> <br>
+            Select the room <select name="lecture[roomId]">
+                <%for(const room of rooms){%>
+                <option value=<%=room._id%>> <%=room.roomName%> </option>
+                <%}%> 
+            </select> <br>
+            Select the Prof <select name="lecture[profId]" >
+                <%for(const prof of taughtBy){%>
+                <option value=<%=prof._id%>> <%=prof.profName%> </option>
+                <%}%> 
+            </select> <br>
+        </div>
+        <br> <br>
+        <div>
+            <h1>Tutorials</h1> 
+            <%for(var lpitrt=0 ; lpitrt<taughtTo.length ; lpitrt++){%>
+                <input type="text" value=<%=taughtTo[lpitrt]._id%> name="tutorial<%=lpitrt%>[groupId]" style="display:none">
+                Tutorial : For <%for(const group of taughtTo){%> <%=group.groupName%>, <%}%> : Frequency
+                <%=numberOfTutorials%> <br>
+                Enter the length of lecture:<input type="number" name="tutorial<%=lpitrt%>[periodLength]" required min="1"> <br>
+                Select the room <select name="tutorial<%=lpitrt%>[roomId]"> <br>
+                    <%for(const room of rooms){%>
+                    <option value=<%=room._id%>> <%=room.roomName%> </option>
+                    <%}%> 
+            </select> <br>
+            Select the Prof <select name="tutorial<%=lpitrt%>[profId]" >
+                <%for(const prof of taughtBy){%>
+                    <option value=<%=prof._id%>> <%=prof.profName%> </option>
+                    <%}%> 
+            </select> <br> <br> <br>
+            <%}%>
+        </div>
+
+        <div>
+            <h1>Labs</h1>
+            <%for(let lpitrt=0 ; lpitrt<taughtTo.length ; lpitrt++) {%>
+                <input type="text" value=<%=taughtTo[lpitrt]._id%> name="lab<%=lpitrt%>[groupId]" style="display:none">
+                Tutorial : For <%for(const group of taughtTo){%> <%=group.groupName%>, <%}%> : Frequency
+                <%=numberOfTutorials%> <br>
+                Enter the length of lecture:<input type="number" name="lab<%=lpitrt%>[periodLength]" required min="1"> <br>
+                Select the room <select name="lab<%=lpitrt%>[roomId]"> <br>
+                    <%for(const room of rooms){%>
+                    <option value=<%=room._id%>> <%=room.roomName%> </option>
+                    <%}%> 
+            </select> <br>
+            Select the Prof <select name="lab<%=lpitrt%>[profId]" >
+                <%for(const prof of taughtBy){%>
+                    <option value=<%=prof._id%>> <%=prof.profName%> </option>
+                    <%}%> 
+            </select> <br> <br> <br>
+            <%}%>
+        </div>
+   
+        <button type="submit">Submit</button>
+    </form>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous">
+</script>
+
+</html>

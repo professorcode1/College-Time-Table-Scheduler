@@ -2,7 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const app = express();
-var addon = require('bindings')('hello');
+const graph = require("graph");
+
 app.use(bodyParser.urlencoded({
     extended: true
 }));
@@ -13,7 +14,6 @@ mongoose.connect("mongodb://localhost:27017/collegeScheduler", {
     useUnifiedTopology: true
 });
 //mongooseObjects
-
 const systemParamSchema = new mongoose.Schema({
     numberOfDays: Number,
     periodsPerDay: Number
@@ -57,10 +57,10 @@ const periodSchema = new mongoose.Schema({
     periodName: String,
     parentCourse: mongoose.Types.ObjectId,
     profTaking: mongoose.Types.ObjectId,
+    roomUsed: mongoose.Types.ObjectId,
     periodLength: Number,
     periodFrequency: Number,
     groupsAttending: [mongoose.Types.ObjectId],
-    potentialRooms: [mongoose.Types.ObjectId],
     periodTime: Number,
     periodAntiTime: [Number],
     periodColor: {
@@ -91,17 +91,21 @@ app.get("/", async (req, res) => {
     }
 });
 
+
 app.get("/systemParams", async (req, res) => {
     await SystemParam.deleteMany();
-    Prof.updateMany({}, {
+    await Prof.updateMany({}, {
         unAvialability: new Array(0)
     });
-    Room.updateMany({}, {
+    await Room.updateMany({}, {
         unAvialability: new Array(0)
     });
-    Group.updateMany({}, {
+    await Group.updateMany({}, {
         unAvialability: new Array(0)
     });
+    const periods = await Period.find();
+    for (const period in periods)
+        await deletePeriod(period._id);
     res.redirect("/");
 });
 
@@ -113,6 +117,7 @@ app.post("/systemParams", async (req, res) => {
             periodsPerDay: req.body.periodsPerDay
         })).save();
     }
+    intialiseGraph();
     res.redirect("/");
 });
 //Professors 
@@ -312,13 +317,13 @@ app.post("/systemParams", async (req, res) => {
         });
     });
 
-    app.post("/deleteCourse", async (req, res) => {
+    app.get("/deleteCourse/:courseId", async (req, res) => {
         const {
             taughtTo,
             taughtBy,
             _id: thisCourseId,
             periods
-        } = await Course.findById(mongoose.Types.ObjectId(req.body.courseId));
+        } = await Course.findById(mongoose.Types.ObjectId(req.params.courseId));
 
         for (const profId of taughtBy) {
             let {
@@ -350,7 +355,7 @@ app.post("/systemParams", async (req, res) => {
             await deletePeriod(periodId);
 
         await Course.deleteOne({
-            _id: mongoose.Types.ObjectId(req.body.courseId)
+            _id: mongoose.Types.ObjectId(req.params.courseId)
         });
         res.redirect("/getCourse");
     });
@@ -409,13 +414,114 @@ app.post("/systemParams", async (req, res) => {
         if (numberOfLectures == 0 && numberOfTutorials == 0 && numberOfLabs == 0)
             res.redirect("/getCourse");
         else
-            res.redirect("/courseTemplate/"+String(thisCourseId));
+            res.redirect("/courseTemplate/" + String(thisCourseId) + "/?numberOfLectures=" + numberOfLectures + "&numberOfTutorials=" + numberOfTutorials + "&numberOfLabs=" + numberOfLabs);
     });
 
-    app.get("/courseTemplate/:courseId",async (req,res) => {
+    app.get("/courseTemplate/:courseId", async (req, res) => {
+        const {
+            taughtBy: taughtByIds,
+            taughtTo: taughtToIds,
+            courseName
+        } = await Course.findById(req.params.courseId);
 
+        let
+            taughtBy = new Array(0),
+            taughtTo = new Array(0),
+            rooms = await Room.find();
+
+        const {
+            numberOfDays,
+            periodsPerDay
+        } = (await SystemParam.find())[0];
+        for (const profId of taughtByIds)
+            taughtBy.push(await Prof.findById(profId));
+        for (const groupId of taughtToIds)
+            taughtTo.push(await Group.findById(groupId));
+        res.render("courseTemplate", {
+            taughtBy: taughtBy,
+            taughtTo: taughtTo,
+            rooms: rooms,
+            numberOfDays: numberOfDays,
+            periodsPerDay: periodsPerDay,
+            courseId: (req.params.courseId),
+            numberOfLectures: Number(req.query.numberOfLectures),
+            numberOfTutorials: Number(req.query.numberOfTutorials),
+            numberOfLabs: Number(req.query.numberOfLabs),
+            courseName: courseName
+        });
     });
 
+    app.post("/courseTemplate", async (req, res) => {
+        const {
+            courseId,
+            numberOfLectures,
+            numberOfTutorials,
+            numberOfLabs
+        } = req.body;
+
+        const course = await Course.findById(courseId);
+
+        if (numberOfLectures != 0) {
+            let periodArgs = {
+                courseId: courseId,
+                periodName: (course.courseName + " Lecture "),
+                profId: req.body.lecture.profId,
+                periodLength: req.body.lecture.periodLength,
+                periodFrequency: numberOfLectures,
+                roomId: req.body.lecture.roomId,
+            };
+
+            for (const groupId of course.taughtTo)
+                periodArgs[groupId] = "on";
+
+            await createPeriod(periodArgs);
+        }
+
+        for (let lpitrt = 0; lpitrt < course.taughtTo.length; lpitrt++) {
+            const {
+                groupId,
+                roomId,
+                profId,
+                periodLength
+            } = req.body["tutorial" + String(lpitrt)];
+
+            let periodArgs = {
+                courseId: courseId,
+                periodName: (course.courseName + " Tutorial " + (await Group.findById(groupId)).groupName),
+                profId: profId,
+                periodLength: periodLength,
+                periodFrequency: numberOfTutorials,
+                roomId: roomId,
+            };
+
+            periodArgs[groupId] = "on";
+
+            await createPeriod(periodArgs);
+        }
+
+        for (let lpitrt = 0; lpitrt < course.taughtTo.length; lpitrt++) {
+            const {
+                groupId,
+                roomId,
+                profId,
+                periodLength
+            } = req.body["lab" + lpitrt];
+
+            let periodArgs = {
+                courseId: courseId,
+                periodName: (course.courseName + " Lab " + (await Group.findById(groupId)).groupName),
+                profId: profId,
+                periodLength: periodLength,
+                periodFrequency: numberOfLabs,
+                roomId: roomId,
+            };
+
+            periodArgs[groupId] = "on";
+
+            await createPeriod(periodArgs);
+        }
+        res.redirect("/getCourse");
+    });
 
     app.get("/updateCourse/:courseId", async (req, res) => {
         const course = await Course.findById(req.params.courseId);
@@ -455,37 +561,42 @@ app.post("/systemParams", async (req, res) => {
 //Periods
 {
     app.get("/getPeriod/:courseId", async (req, res) => {
+
         const {
             periods: periodIds,
             taughtBy: taughtByIds,
             taughtTo: taughtToIds
         } = await Course.findById(req.params.courseId);
+
         let periodDisplay = new Array(0),
             taughtBy = new Array(0),
             taughtTo = new Array(0),
             rooms = await Room.find();
+
         const {
             numberOfDays,
             periodsPerDay
         } = (await SystemParam.find())[0];
+
         for (const periodId of periodIds) {
+
             period = await Period.findById(periodId);
+
             groupsAttendingDisplay = new Array(0);
             for (const groupId of period.groupsAttending)
                 groupsAttendingDisplay.push((await Group.findById(groupId)).groupName);
 
-            potentialRoomsDisplay = new Array(0);
-            for (const roomId of period.potentialRooms)
-                potentialRoomsDisplay.push((await Room.findById(roomId)).roomName)
-
+            const {
+                roomName: roomUsedDisplay
+            } = await Room.findById(period.roomUsed);
 
             let preferenceString = ""
             if (period.periodTime !== -1) {
-                preferenceString = "The period must take place at D" + String(Math.floor(period.periodTime / periodsPerDay) + 1) + "P" + String(period.periodTime % periodsPerDay);
+                preferenceString = "The period must take place at D" + String(Math.floor(period.periodTime / periodsPerDay) + 1) + "P" + String((period.periodTime % periodsPerDay) + 1);
             } else if (period.periodAntiTime.length !== 0) {
                 preferenceString = "The period must not take place at ";
                 for (const prefval of period.periodAntiTime)
-                    preferenceString += "D" + String(Math.floor(prefval / periodsPerDay) + 1) + "P" + String(prefval % periodsPerDay) + " , ";
+                    preferenceString += "D" + String(Math.floor(prefval / periodsPerDay) + 1) + "P" + String((prefval % periodsPerDay) + 1) + " , ";
             } else {
                 preferenceString = "No special preference.";
             }
@@ -498,7 +609,7 @@ app.post("/systemParams", async (req, res) => {
                 periodLength: (period.periodLength),
                 periodFrequency: (period.periodFrequency),
                 groupsAttending: groupsAttendingDisplay,
-                potentialRooms: potentialRoomsDisplay,
+                roomUsed: roomUsedDisplay,
                 preference: preferenceString
             };
 
@@ -521,13 +632,16 @@ app.post("/systemParams", async (req, res) => {
 
     app.post("/addPeriod", async (req, res) => {
         await createPeriod(req.body);
-        const {courseId} = req.body;
+        const {
+            courseId
+        } = req.body;
         res.redirect("/getPeriod/" + String(courseId));
     });
 
     app.get("/deletePeriod/:periodId", async (req, res) => {
+        const courseId = (await Period.findById(req.params.periodId)).parentCourse;
         await deletePeriod(req.params.periodId);
-        res.redirect("/getCourse");
+        res.redirect("/getPeriod/" + String(courseId));
     });
 }
 async function deletePeriod(periodId) {
@@ -535,8 +649,6 @@ async function deletePeriod(periodId) {
 
     if (!period)
         return;
-
-    //updating the course
     //updating the course
     let {
         periods
@@ -572,18 +684,16 @@ async function deletePeriod(periodId) {
         });
     }
 
-    //update the rooms
-    for (const roomId of period.potentialRooms) {
-        let {
-            periodsUsedIn
-        } = await Room.findById(roomId);
-        periodsUsedIn.splice(periodsUsedIn.indexOf(periodId), 1);
-        await Room.updateOne({
-            _id: roomId
-        }, {
-            periodsUsedIn: periodsUsedIn
-        });
-    }
+    //update the room
+    let {
+        periodsUsedIn
+    } = await Room.findById(period.roomUsed);
+    periodsUsedIn.splice(periodsUsedIn.indexOf(periodId), 1);
+    await Room.updateOne({
+        _id: (period.roomUsed)
+    }, {
+        periodsUsedIn: periodsUsedIn
+    });
 
     await Period.deleteOne({
         _id: periodId
@@ -600,20 +710,15 @@ async function createPeriod(periodArgs) {
         periodName,
         profId,
         periodLength,
-        periodFrequency
+        periodFrequency,
+        roomId,
     } = periodArgs;
-
-    let groupsAttending = new Array(0),
-        potentialRooms = new Array(0);
+    let groupsAttending = new Array(0);
 
     for (const group of (await Group.find()))
         if (periodArgs[group._id] === "on")
             groupsAttending.push(mongoose.Types.ObjectId(group._id));
 
-
-    for (const room of (await Room.find()))
-        if (periodArgs[room._id] === "on")
-            potentialRooms.push(mongoose.Types.ObjectId(room._id));
 
     let periodObject = {
         periodName: periodName,
@@ -622,25 +727,36 @@ async function createPeriod(periodArgs) {
         periodLength: (Number(periodLength)),
         periodFrequency: periodFrequency,
         groupsAttending: groupsAttending,
-        potentialRooms: potentialRooms
+        roomUsed: (mongoose.Types.ObjectId(roomId))
     }
-
-    if (periodArgs.specifyTime) {
-        const periodTime = periodsPerDay * (Number(periodArgs.timeSpeicifiedDay) - 1) + Number(periodArgs.timeSpeicifiedPeriod);
-        periodObject.periodTime = periodTime;
-        periodObject.periodAntiTime = new Array(0);
+    if (periodFrequency == 1) {
+        if (periodArgs.specifyTime && periodArgs.timeSpeicifiedDay && periodArgs.timeSpeicifiedPeriod) {
+            if (Number(periodArgs.timeSpeicifiedPeriod) + Number(periodLength) <= periodsPerDay + 1) {
+                const periodTime = periodsPerDay * (Number(periodArgs.timeSpeicifiedDay) - 1) + Number(periodArgs.timeSpeicifiedPeriod) - 1;
+                periodObject.periodTime = periodTime;
+                periodObject.periodAntiTime = new Array(0);
+            } else {
+                periodObject.periodTime = -1;
+                periodObject.periodAntiTime = new Array(0);
+                console.log("createPeriod function WARNING:The period just made didn't have it's time set as that time was impossible.");
+            }
+        } else {
+            let periodAntiTime = new Array(0);
+            for (let loopitrt = 0; loopitrt < numberOfDays * periodsPerDay; loopitrt++)
+                if (periodArgs["antiTimeSpecified" + String(loopitrt)] === "on")
+                    periodAntiTime.push(loopitrt);
+            periodObject.periodTime = -1;
+            periodObject.periodAntiTime = periodAntiTime;
+        }
     } else {
-        let periodAntiTime = new Array(0);
-        for (let loopitrt = 0; loopitrt < numberOfDays * periodsPerDay; loopitrt++)
-            if (periodArgs["antiTimeSpecified" + String(loopitrt)] === "on")
-                periodAntiTime.push(loopitrt);
         periodObject.periodTime = -1;
-        periodObject.periodAntiTime = periodAntiTime;
+        periodObject.periodAntiTime = new Array(0);
     }
 
+    const period = await (new Period(periodObject)).save();
     const {
         _id: thisPeriodId
-    } = await (new Period(periodObject)).save();
+    } = period;
 
     //updating the course
     let {
@@ -677,20 +793,120 @@ async function createPeriod(periodArgs) {
         });
     }
 
-    //update the rooms
-    for (const roomId of potentialRooms) {
-        let {
-            periodsUsedIn
-        } = await Room.findById(roomId);
-        periodsUsedIn.push(mongoose.Types.ObjectId(thisPeriodId));
-        await Room.updateOne({
-            _id: roomId
-        }, {
-            periodsUsedIn: periodsUsedIn
-        });
-    }
+    //update the room
+    let {
+        periodsUsedIn
+    } = await Room.findById(roomId);
+    periodsUsedIn.push(mongoose.Types.ObjectId(thisPeriodId));
+    await Room.updateOne({
+        _id: roomId
+    }, {
+        periodsUsedIn: periodsUsedIn
+    });
+    return period;
 }
-//console.log(addon.add(3, 5));
 app.listen(3000, () => {
     console.log("listening on port 3000");
 });
+var schedulerGraph = new graph.Graph();
+intialiseGraph();
+
+app.get("/viewGraph", (req, res) => {
+    res.send(schedulerGraph);
+});
+
+async function intialiseGraph() {
+    console.log("Initialising graph");
+    if (await SystemParam.countDocuments() === 0) {
+        console.log("Completed Initialising Graph");
+        return;
+    }
+
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+    for (let lpitrt = 1; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+        for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+            schedulerGraph.set(lpitrt, lpitrt1);
+
+    const periods = await Period.find();
+    const groups = await Group.find();
+    const rooms = await Room.find();
+    const profs = await Prof.find();
+
+    for (const room of rooms) {
+
+        for (let lpitrt = 0; lpitrt < room.periodsUsedIn.length; lpitrt++) {
+            for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                schedulerGraph.set(String(room.periodsUsedIn[lpitrt]) + "Period0", String(room.periodsUsedIn[lpitrt1]) + "Period0");
+
+
+            for (const roomUnavailabiliy of room.unAvialability)
+                schedulerGraph.set(roomUnavailabiliy, String(room.periodsUsedIn[lpitrt]) + "Period0");
+        }
+    }
+    console.log("Initialise::Rooms done");
+
+    for (const prof of profs) {
+        for (let lpitrt = 0; lpitrt < prof.periodsTaken.length; lpitrt++) {
+            for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                schedulerGraph.set(String(prof.periodsTaken[lpitrt]) + "Period0", String(prof.periodsTaken[lpitrt1]) + "Period0");
+
+
+            for (const profUnavailabiliy of prof.unAvialability)
+                schedulerGraph.set(profUnavailabiliy, String(prof.periodsTaken[lpitrt]) + "Period0");
+        }
+    }
+    console.log("Initialise::Prof Done");
+
+    for (const group of groups) {
+        for (let lpitrt = 0; lpitrt < group.periodsAttended.length; lpitrt++) {
+            for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                schedulerGraph.set(String(group.periodsAttended[lpitrt]) + "Period0", String(group.periodsAttended[lpitrt1]) + "Period0");
+
+
+            for (const groupUnavailabiliy of group.unAvialability)
+                schedulerGraph.set(groupUnavailabiliy, String(group.periodsAttended[lpitrt]) + "Period0");
+        }
+    }
+    console.log("Initialise::Group Done");
+
+    for (const period of periods) {
+        console.log(period.periodName);
+        if (period.periodFrequency == 1) {
+            if (period.periodTime != -1) {
+                for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+                    if (lpitrt != period.periodTime)
+                        schedulerGraph.set(lpitrt, String(period._id) + "Period0");
+            } else if (period.periodAntiTime.length != 0) {
+                for (const antiTime of period.periodAntiTime)
+                    schedulerGraph.set(Number(antiTime), String(period._id) + "Period0");
+            }
+        }
+
+        for (let len = 1; len < Number(period.periodLength); len++) {
+
+            const thisPeriodNode = String(period._id) + "Period" + String(len);
+            console.log(thisPeriodNode);
+            for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
+                schedulerGraph.set(node, thisPeriodNode);
+
+            for (let itrt = period.length - 1 - len; itrt > 0; itrt--)
+                for (let day = 0; day < numberOfDays; day++)
+                    schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
+
+            for (let itrt = 0; itrt < len; itrt++)
+                for (let day = 0; day < numberOfDays; day++)
+                    schedulerGraph.set(day * periodsPerDay + itrt, thisPeriodNode);
+        }
+
+
+        for (let itrt = period.length - 1; itrt > 0; itrt--)
+            for (let day = 0; day < numberOfDays; day++)
+                schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
+
+
+    }
+    console.log("Initialisation Complete");
+}

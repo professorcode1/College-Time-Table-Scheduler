@@ -639,7 +639,8 @@ app.post("/systemParams", async (req, res) => {
     });
 
     app.get("/deletePeriod/:periodId", async (req, res) => {
-        const courseId = (await Period.findById(req.params.periodId)).parentCourse;
+        const period = await Period.findById(req.params.periodId);
+        const courseId = period.parentCourse;
         await deletePeriod(req.params.periodId);
         res.redirect("/getPeriod/" + String(courseId));
     });
@@ -649,6 +650,11 @@ async function deletePeriod(periodId) {
 
     if (!period)
         return;
+
+
+    deletePeriodNode(period);
+
+
     //updating the course
     let {
         periods
@@ -757,6 +763,8 @@ async function createPeriod(periodArgs) {
     const {
         _id: thisPeriodId
     } = period;
+    
+    await addPerioddNode(period);
 
     //updating the course
     let {
@@ -808,6 +816,7 @@ async function createPeriod(periodArgs) {
 app.listen(3000, () => {
     console.log("listening on port 3000");
 });
+
 var schedulerGraph = new graph.Graph();
 intialiseGraph();
 
@@ -873,13 +882,17 @@ async function intialiseGraph() {
     console.log("Initialise::Group Done");
 
     for (const period of periods) {
-        console.log(period.periodName);
+        console.log("Initialise::" + period.periodName);
+
         if (period.periodFrequency == 1) {
+
             if (period.periodTime != -1) {
+
                 for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
                     if (lpitrt != period.periodTime)
                         schedulerGraph.set(lpitrt, String(period._id) + "Period0");
             } else if (period.periodAntiTime.length != 0) {
+
                 for (const antiTime of period.periodAntiTime)
                     schedulerGraph.set(Number(antiTime), String(period._id) + "Period0");
             }
@@ -888,11 +901,11 @@ async function intialiseGraph() {
         for (let len = 1; len < Number(period.periodLength); len++) {
 
             const thisPeriodNode = String(period._id) + "Period" + String(len);
-            console.log(thisPeriodNode);
+
             for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
                 schedulerGraph.set(node, thisPeriodNode);
 
-            for (let itrt = period.length - 1 - len; itrt > 0; itrt--)
+            for (let itrt = Number(period.periodLength) - 1 - len; itrt > 0; itrt--)
                 for (let day = 0; day < numberOfDays; day++)
                     schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
 
@@ -902,11 +915,136 @@ async function intialiseGraph() {
         }
 
 
-        for (let itrt = period.length - 1; itrt > 0; itrt--)
+        for (let itrt = Number(period.periodLength) - 1; itrt > 0; itrt--)
             for (let day = 0; day < numberOfDays; day++)
                 schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
 
 
     }
     console.log("Initialisation Complete");
+}
+
+function deletePeriodNode(period) {
+    console.log("Deleting period node" + period.periodName);
+    for (let len = 0; len < period.periodLength; len++)
+        console.log(schedulerGraph.drop(String(period._id) + "Period" + String(len)));
+}
+
+async function addPerioddNode(period) {
+    
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+
+    let groupContraints = new Array(0);
+    for (const groupId of period.groupsAttending) {
+        const {
+            periodsAttended,
+            unAvialability: groupUnavialability
+        } = await Group.findById(period.groupsAttending);
+
+        groupContraints.push({
+            periodsAttended: periodsAttended,
+            groupUnAvialability: groupUnavialability
+        });
+    }
+
+    console.log("Append Period Node::" + period.periodName);
+
+    if (period.periodFrequency == 1) {
+
+        if (period.periodTime != -1) {
+
+            for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+                if (lpitrt != period.periodTime)
+                    schedulerGraph.set(lpitrt, String(period._id) + "Period0");
+        } else if (period.periodAntiTime.length != 0) {
+
+            for (const antiTime of period.periodAntiTime)
+                schedulerGraph.set(Number(antiTime), String(period._id) + "Period0");
+        }
+    }
+
+    for (let len = 1; len < Number(period.periodLength); len++) {
+
+        const thisPeriodNode = String(period._id) + "Period" + String(len);
+
+        for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
+            schedulerGraph.set(node, thisPeriodNode);
+
+        for (let itrt = Number(period.periodLength) - 1 - len; itrt > 0; itrt--)
+            for (let day = 0; day < numberOfDays; day++)
+                schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
+
+        for (let itrt = 0; itrt < len; itrt++)
+            for (let day = 0; day < numberOfDays; day++)
+                schedulerGraph.set(day * periodsPerDay + itrt, thisPeriodNode);
+    }
+
+
+    for (let itrt = Number(period.periodLength) - 1; itrt > 0; itrt--)
+        for (let day = 0; day < numberOfDays; day++)
+            schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
+
+
+    const {
+        periodsUsedIn, //by the room
+        unAvialability: roomUnavialability
+    } = await Room.findById(period.roomUsed);
+
+
+    for (let len = 0; len < Number(period.periodLength); len++) {
+
+        for (const neighbor of periodsUsedIn) {
+            let neighborPeriod = await Period.findById(neighbor);
+            for (let neblen = 0; neblen < Number(neighborPeriod.periodLength); neblen++)
+                schedulerGraph.set(String(neighborPeriod._id) + "Period" + String(neblen), String(period._id) + "Period" + String(len));
+        }
+
+        for (const roomBusy of roomUnavialability) {
+            schedulerGraph.set(Number(roomBusy), String(period._id) + "Period" + String(len));
+        }
+    }
+
+
+
+    const {
+        periodsTaken, //by the prof
+        unAvialability: profUnavialability
+    } = await Prof.findById(period.profTaking);
+
+    for (let len = 0; len < Number(period.periodLength); len++) {
+
+        for (const neighbor of periodsTaken) {
+            let neighborPeriod = await Period.findById(neighbor);
+            for (let neblen = 0; neblen < Number(neighborPeriod.periodLength); neblen++)
+                schedulerGraph.set(String(neighborPeriod._id) + "Period" + String(neblen), String(period._id) + "Period" + String(len));
+        }
+
+        for (const roomBusy of profUnavialability) {
+            schedulerGraph.set(Number(roomBusy), String(period._id) + "Period" + String(len));
+        }
+    }
+
+    for (const groupId of period.groupsAttending) {
+        const {
+            periodsAttended,
+            unAvialability: groupUnavialability
+        } = await Group.findById(period.groupsAttending);
+
+        for (let len = 0; len < Number(period.periodLength); len++) {
+
+            for (const neighbor of periodsAttended) {
+                let neighborPeriod = await Period.findById(neighbor);
+                for (let neblen = 0; neblen < Number(neighborPeriod.periodLength); neblen++)
+                    schedulerGraph.set(String(neighborPeriod._id) + "Period" + String(neblen), String(period._id) + "Period" + String(len));
+            }
+    
+            for (const roomBusy of groupUnavialability) {
+                schedulerGraph.set(Number(roomBusy), String(period._id) + "Period" + String(len));
+            }
+        }
+    }
+    console.log("Graph Update Complete");
 }

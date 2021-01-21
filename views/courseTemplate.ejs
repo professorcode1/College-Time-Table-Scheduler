@@ -40,7 +40,7 @@
             <h1>Tutorials</h1> 
             <%for(var lpitrt=0 ; lpitrt<taughtTo.length ; lpitrt++){%>
                 <input type="text" value=<%=taughtTo[lpitrt]._id%> name="tutorial<%=lpitrt%>[groupId]" style="display:none">
-                Tutorial : For <%for(const group of taughtTo){%> <%=group.groupName%>, <%}%> : Frequency
+                Tutorial : <%=taughtTo[lpitrt].groupName%>, : Frequency
                 <%=numberOfTutorials%> <br>
                 Enter the length of lecture:<input type="number" name="tutorial<%=lpitrt%>[periodLength]" required min="1"> <br>
                 Select the room <select name="tutorial<%=lpitrt%>[roomId]"> <br>
@@ -60,8 +60,8 @@
             <h1>Labs</h1>
             <%for(let lpitrt=0 ; lpitrt<taughtTo.length ; lpitrt++) {%>
                 <input type="text" value=<%=taughtTo[lpitrt]._id%> name="lab<%=lpitrt%>[groupId]" style="display:none">
-                Tutorial : For <%for(const group of taughtTo){%> <%=group.groupName%>, <%}%> : Frequency
-                <%=numberOfTutorials%> <br>
+                Tutorial : <%=taughtTo[lpitrt].groupName%>,  : Frequency
+                <%=numberOfLabs%> <br>
                 Enter the length of lecture:<input type="number" name="lab<%=lpitrt%>[periodLength]" required min="1"> <br>
                 Select the room <select name="lab<%=lpitrt%>[roomId]"> <br>
                     <%for(const room of rooms){%>

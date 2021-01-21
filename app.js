@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const app = express();
 const graph = require("graph");
-
+const io = require('console-read-write');
 app.use(bodyParser.urlencoded({
     extended: true
 }));
@@ -763,7 +763,7 @@ async function createPeriod(periodArgs) {
     const {
         _id: thisPeriodId
     } = period;
-    
+
     await addPerioddNode(period);
 
     //updating the course
@@ -921,7 +921,9 @@ async function intialiseGraph() {
 
 
     }
+    checkTimeTablePossible();
     console.log("Initialisation Complete");
+    antColonySystemRLF(1, 3, 0.5, 0.5, 1);
 }
 
 function deletePeriodNode(period) {
@@ -931,7 +933,7 @@ function deletePeriodNode(period) {
 }
 
 async function addPerioddNode(period) {
-    
+
     const {
         numberOfDays,
         periodsPerDay
@@ -1040,11 +1042,129 @@ async function addPerioddNode(period) {
                 for (let neblen = 0; neblen < Number(neighborPeriod.periodLength); neblen++)
                     schedulerGraph.set(String(neighborPeriod._id) + "Period" + String(neblen), String(period._id) + "Period" + String(len));
             }
-    
+
             for (const roomBusy of groupUnavialability) {
                 schedulerGraph.set(Number(roomBusy), String(period._id) + "Period" + String(len));
             }
         }
     }
+    checkTimeTablePossible();
     console.log("Graph Update Complete");
+}
+
+async function checkTimeTablePossible() {
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+
+    for (const node in schedulerGraph._degree) {
+        if (schedulerGraph._degree[node] >= numberOfDays * periodsPerDay) {
+            const nodeString = String(node);
+            if (node.length < 24)
+                continue;
+            const period = await Period.findById(nodeString.slice(0, 24));
+            console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
+        }
+    }
+}
+
+async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, numberOfAnts) {
+    const parentGraphsNodes = schedulerGraph._vertices;
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+
+    const coloringGraph = new graph.Graph();
+    for (let lpitrt = 0; lpitrt < parentGraphsNodes.length; lpitrt++)
+        for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+            if (!(schedulerGraph.has(parentGraphsNodes[lpitrt], parentGraphsNodes[lpitrt1])))
+                coloringGraph.set(parentGraphsNodes[lpitrt], parentGraphsNodes[lpitrt1], 1);
+
+    for (let generations = 0; generations < 1; generations++) {
+        let antTripsPromises = new Array(0);
+
+        for (let antNumber = 0; antNumber < numberOfAnts; antNumber++)
+            antTripsPromises.push((async () => {
+
+                let coloring = new Map(),
+                    unColored = new Set(schedulerGraph._vertices),
+                    color;
+                while (unColored.size > 0) {
+                    //console.log(coloring);
+                    //await io.read();
+                    let antStartingChoices = ([...unColored]).filter(ele => String(ele).length < 24),
+                        neighborOfColored = new Set();
+                    let ant = antStartingChoices[Math.floor(Math.random() * antStartingChoices.length)]
+                    color = Number(ant);
+                    unColored.delete(ant);
+                    coloring.set(color, new Array(0));
+                    //console.log(coloring,"\n",ant,"\n",[...unColored]);
+                    while (true) {
+                        let nextAntStop = new Map();
+
+                        //Colorable Neighbor => Connected by No edge. Neighbor => Connected by edge.
+                        for (const antColorableNeighbor in coloringGraph._graph[ant])
+                            if (unColored.has(antColorableNeighbor) && (!neighborOfColored.has(antColorableNeighbor))) {
+
+                                let pheramon = coloringGraph.get(antColorableNeighbor, ant),
+                                    deg_a_antNeighbor = 0;
+                                for (const antColorableNeighborsNeighbor in schedulerGraph._graph[antColorableNeighbor])
+                                    if (unColored.has(antColorableNeighborsNeighbor))
+                                        deg_a_antNeighbor++;
+                                let heuristic = unColored.size - deg_a_antNeighbor; //heuristic can be 1)deg_in_neighborOfCOlored of antNeighbor OR 2)unColored.size - deg_a_antNeighbor OR 3)deg_in_uncolored_Union_neighborOfColored_of_antNeighbor
+
+                                let transitionValue = Math.pow(pheramon, alpha) * Math.pow(heuristic, beta);
+                                if (transitionValue < 0)
+                                    console.log("WARNING:Transition value dipped below 0.");
+                                nextAntStop.set(antColorableNeighbor, transitionValue);
+                            }
+
+                        if (nextAntStop.size === 0)
+                            break;
+
+                        let nextAnt;
+
+                        if (Math.random() < Qnot) {
+                            let bestTransitionValue = -1;
+                            for (const [transitionChoice, transitionValue] of nextAntStop) {
+                                if (transitionValue > bestTransitionValue) {
+                                    bestTransitionValue = transitionValue;
+                                    nextAnt = transitionChoice;
+                                }
+                            }
+                        } else {
+                            let cumilativeTransitionValue = 0;
+                            for (const transitionValue of nextAntStop.values())
+                                cumilativeTransitionValue += transitionValue;
+
+                            let antChoice = Math.random() * cumilativeTransitionValue;
+
+                            cumilativeTransitionValue = 0;
+                            for (const [transitionChoice, transitionValue] of nextAntStop) {
+                                nextAnt = transitionChoice;
+                                cumilativeTransitionValue += transitionValue;
+                                if (cumilativeTransitionValue >= transitionValue)
+                                    break;
+                            }
+                        }
+
+                        ant = nextAnt;
+                        unColored.delete(ant);
+                        coloring.set(color, [...coloring.get(color), ant]);
+                        for (const antsNeighbor in schedulerGraph._graph[ant])
+                            neighborOfColored.add(antsNeighbor);
+                    }
+                }
+                return coloring;
+            })()); //solutions is an array of promises. Multithreading the trips
+
+        //let antTrips = new Array(numberOfAnts);
+
+    }
+}
+function antTripFitness(trip)
+{
+    
 }

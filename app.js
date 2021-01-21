@@ -927,7 +927,7 @@ async function intialiseGraph() {
     }
     checkTimeTablePossible();
     console.log("Initialisation Complete");
-    antColonySystemRLF(2, 5, 0.01, 0.7, 0.5, 1, 60);
+    antColonySystemRLF(0, 1, 0.3, 0.05, 1, 0.25, 1, 60);
 }
 
 function deletePeriodNode(period) {
@@ -1079,7 +1079,8 @@ async function checkTimeTablePossible() {
     }
 }
 
-async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheramonValue, numberOfAnts) {
+//ACS on RLF. No matter what I do it is not working. it has bugs that just cannot be explained.
+async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, tripRestartProbability, initialPheramonValue, numberOfAnts) {
     const parentGraphsNodes = schedulerGraph._vertices;
     const {
         numberOfDays,
@@ -1088,13 +1089,13 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
     const periods = await Period.find();
 
     const coloringGraph = new graph.Graph();
-    for (let lpitrt = 0; lpitrt < parentGraphsNodes.length; lpitrt++)
-        for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-            if (!(schedulerGraph.has(parentGraphsNodes[lpitrt], parentGraphsNodes[lpitrt1])))
-                coloringGraph.set(parentGraphsNodes[lpitrt], parentGraphsNodes[lpitrt1], initialPheramonValue);
+    for (const nodeOne in schedulerGraph._graph)
+        for (const nodeTwo in schedulerGraph._graph)
+            if (!schedulerGraph.has(nodeOne, nodeTwo))
+                coloringGraph.set(nodeOne, nodeTwo, initialPheramonValue);
 
     let solutionBestSoFar, fitnessOfSolutionBestSoFar = 0;
-    for (let generations = 0; fitnessOfSolutionBestSoFar < 1; generations++) {
+    for (let generations = 0; fitnessOfSolutionBestSoFar < 99; generations++) {
 
         let antTrips = new Array(numberOfAnts);
         for (let antNumber = 0; antNumber < numberOfAnts; antNumber++) {
@@ -1107,6 +1108,10 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
             antTrips[antNumber].color = Number(antTrips[antNumber].ant);
             antTrips[antNumber].coloring.set(antTrips[antNumber].color, new Array(0));
             antTrips[antNumber].unColored.delete(antTrips[antNumber].ant);
+
+            antTrips[antNumber].messageForOtherColor = new Map();
+            for (let numOfPer = 0; numOfPer < numberOfDays * periodsPerDay; numOfPer++)
+                antTrips[antNumber].messageForOtherColor.set(numOfPer, new Array(0));
         }
         while (true) {
             let allAntsHaveCompletedTheirTrips = true;
@@ -1118,7 +1123,7 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
                 let nextAntStop = new Map();
                 //Colorable Neighbor => Connected by No edge. Neighbor => Connected by edge.
                 for (const antColorableNeighbor in coloringGraph._graph[antTrips[antNumber].ant])
-                    if (antTrips[antNumber].unColored.has(antColorableNeighbor) && (!antTrips[antNumber].neighborOfColored.has(antColorableNeighbor))) {
+                    if (antTrips[antNumber].unColored.has(antColorableNeighbor) && (!antTrips[antNumber].neighborOfColored.has(antColorableNeighbor)) && (!schedulerGraph.has(antColorableNeighbor, antTrips[antNumber].color))) {
 
                         let pheramon = coloringGraph.get(antColorableNeighbor, antTrips[antNumber].ant),
                             deg_a_antNeighbor = 0;
@@ -1126,12 +1131,15 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
                             if (antTrips[antNumber].unColored.has(antColorableNeighborsNeighbor))
                                 deg_a_antNeighbor++;
                         let heuristic = antTrips[antNumber].unColored.size - deg_a_antNeighbor; //heuristic can be 1)deg_in_neighborOfCOlored of antNeighbor OR 2)unColored.size - deg_a_antNeighbor OR 3)deg_in_uncolored_Union_neighborOfColored_of_antNeighbor
+                        //if (antNumber === 1)
+                            //console.log(heuristic);
 
                         let transitionValue = Math.pow(pheramon, alpha) * Math.pow(heuristic, beta);
                         nextAntStop.set(antColorableNeighbor, transitionValue);
                     }
-
-                if (nextAntStop.size === 0) {
+                //if (antNumber === 1)
+                   // console.log("\n");
+                if (nextAntStop.size === 0 || Math.random() < tripRestartProbability) {
                     if (antTrips[antNumber].unColored.size === 0)
                         continue;
 
@@ -1152,40 +1160,62 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
                         antTrips[antNumber].coloring.set(antTrips[antNumber].color, [antTrips[antNumber].ant]);
                         for (const antsNeighbor in schedulerGraph._graph[antTrips[antNumber].ant])
                             antTrips[antNumber].neighborOfColored.add(antsNeighbor);
+
+                        antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color, new Array(0));
+
+
+
+                        let {
+                            periodLength: thisAntsPeriodLength
+                        } = await Period.findById(String(antTrips[antNumber].ant).slice(0, 24));
+                        let thisAntPeriodNumber = Number(String(antTrips[antNumber].ant).slice(30));
+
+                        for (let messageForPreviosPeriods = thisAntPeriodNumber - 1; messageForPreviosPeriods >= 0; messageForPreviosPeriods--) {
+                            //console.log(antTrips[antNumber].color - messageForPreviosPeriods, antTrips[antNumber].color, messageForPreviosPeriods, String(antTrips[antNumber].ant));
+                            antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color - messageForPreviosPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color - messageForPreviosPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForPreviosPeriods)]);
+                        }
+                        if (antTrips[antNumber].color < numberOfDays * periodsPerDay)
+                            for (let messageForNextPeriods = thisAntPeriodNumber + 1; messageForNextPeriods < thisAntsPeriodLength; messageForNextPeriods++) {
+                                //console.log(antTrips[antNumber].color + messageForNextPeriods, antTrips[antNumber].color, messageForNextPeriods, String(antTrips[antNumber].ant));
+                                antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color + messageForNextPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color + messageForNextPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForNextPeriods)]);
+                            }
                     }
                     continue;
                 }
-
-                let nextAnt;
-                if (Math.random() < Qnot) {
-                    let bestTransitionValue = -1;
-                    for (const [transitionChoice, transitionValue] of nextAntStop) {
-                        if (transitionValue > bestTransitionValue) {
-                            bestTransitionValue = transitionValue;
-                            nextAnt = transitionChoice;
-                        }
-                    }
-                    if (!nextAnt) {
-                        console.log("suka balyat!");
-                        await io.read();
-                    }
-                } else {
-                    let cumilativeTransitionValue = 0;
-                    for (const transitionValue of nextAntStop.values())
-                        cumilativeTransitionValue += transitionValue;
-
-                    let antChoice = Math.random() * cumilativeTransitionValue;
-
-                    cumilativeTransitionValue = 0;
-                    for (const [transitionChoice, transitionValue] of nextAntStop) {
+                let nextAnt; //check if there is any message for this color asking it to pick a speicfic node
+                for (const [transitionChoice, transitionValue] of nextAntStop) {
+                    if (antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color).includes(transitionChoice)) {
                         nextAnt = transitionChoice;
-                        cumilativeTransitionValue += transitionValue;
-                        if (cumilativeTransitionValue >= transitionValue)
-                            break;
+                        break;
+                    }
+                }
+                if (!nextAnt) {
+                    if (Math.random() < Qnot) {
+                        let bestTransitionValue = -1;
+                        for (const [transitionChoice, transitionValue] of nextAntStop) {
+                            if (transitionValue > bestTransitionValue) {
+                                bestTransitionValue = transitionValue;
+                                nextAnt = transitionChoice;
+                            }
+                        }
+                    } else {
+                        let cumilativeTransitionValue = 0;
+                        for (const transitionValue of nextAntStop.values())
+                            cumilativeTransitionValue += transitionValue;
+
+                        let antChoice = Math.random() * cumilativeTransitionValue;
+
+                        cumilativeTransitionValue = 0;
+                        for (const [transitionChoice, transitionValue] of nextAntStop) {
+                            nextAnt = transitionChoice;
+                            cumilativeTransitionValue += transitionValue;
+                            if (cumilativeTransitionValue >= transitionValue)
+                                break;
+                        }
                     }
                 }
                 //Local Pheramon Update
-                const localPhreramonUpdate = (1 - Epsilon) * coloringGraph.get(antTrips[antNumber].ant, nextAnt) + Epsilon * initialPheramonValue;
+                const localPhreramonUpdate = (1 - Epsilon) * coloringGraph.get(antTrips[antNumber].ant, nextAnt) + Epsilon * (initialPheramonValue * 2);
                 coloringGraph.set(antTrips[antNumber].ant, nextAnt, localPhreramonUpdate);
 
 
@@ -1194,6 +1224,19 @@ async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, initialPheram
                 antTrips[antNumber].coloring.set(antTrips[antNumber].color, [...antTrips[antNumber].coloring.get(antTrips[antNumber].color), antTrips[antNumber].ant]);
                 for (const antsNeighbor in schedulerGraph._graph[antTrips[antNumber].ant])
                     antTrips[antNumber].neighborOfColored.add(antsNeighbor);
+
+                let {
+                    periodLength: thisAntsPeriodLength
+                } = await Period.findById(String(antTrips[antNumber].ant).slice(0, 24));
+                let thisAntPeriodNumber = Number(String(antTrips[antNumber].ant).slice(30));
+
+                for (let messageForPreviosPeriods = thisAntPeriodNumber - 1; messageForPreviosPeriods >= 0; messageForPreviosPeriods--) {
+                    //console.log(antTrips[antNumber].color - messageForPreviosPeriods, antTrips[antNumber].color, messageForPreviosPeriods, String(antTrips[antNumber].ant));
+                    antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color - messageForPreviosPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color - messageForPreviosPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForPreviosPeriods)]);
+                }
+                if (antTrips[antNumber].color < numberOfDays * periodsPerDay)
+                    for (let messageForNextPeriods = thisAntPeriodNumber + 1; messageForNextPeriods < thisAntsPeriodLength; messageForNextPeriods++)
+                        antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color + messageForNextPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color + messageForNextPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForNextPeriods)]);
 
             }
         }
@@ -1251,5 +1294,5 @@ function antTripFitness(trip, periods, numberOfDays, periodsPerDay) {
                 if (periodConsecutiveCheck[periodConsecutiveCheckItrt] - periodConsecutiveCheck[periodConsecutiveCheckItrt - 1] !== 1)
                     sickness += 1;
         }
-    return 1 / (1 + sickness);
+    return 100 / (1 + sickness);
 }

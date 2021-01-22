@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "array-move": "^3.0.1",
     "body-parser": "^1.19.0",
     "consecutive": "^5.0.5",
     "console-read-write": "^0.1.1",

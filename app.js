@@ -5,6 +5,7 @@ const app = express();
 const graph = require("graph");
 const io = require('console-read-write');
 const arrayMove = require("array-move");
+const randomArray = require('array-random')
 app.use(bodyParser.urlencoded({
     extended: true
 }));
@@ -17,7 +18,8 @@ mongoose.connect("mongodb://localhost:27017/collegeScheduler", {
 //mongooseObjects
 const systemParamSchema = new mongoose.Schema({
     numberOfDays: Number,
-    periodsPerDay: Number
+    periodsPerDay: Number,
+    timeTable: Map
 });
 const SystemParam = mongoose.model("systemParam", systemParamSchema);
 
@@ -76,11 +78,6 @@ const populationSchema = new mongoose.Schema({
     individual: [Map]
 });
 const nextGen = mongoose.model("nextGen", populationSchema);
-const timeTableSchema = new mongoose.Schema({
-    timeTable: Map
-});
-
-const timeTableMongooseModel = mongoose.model("timetable", timeTableSchema);
 
 app.get("/", async (req, res) => {
     if ((await SystemParam.find()).length === 0)
@@ -657,6 +654,51 @@ app.post("/systemParams", async (req, res) => {
         res.redirect("/getPeriod/" + String(courseId));
     });
 }
+
+//Time table
+{
+    app.get("/makeTimeTable", async (req, res) => {
+        GeneticAlgorithm();
+        res.send(" <h1>Pease do not reload on this page as that will break everything!</h1> Algorithm started.See console to check if it has generated a potential solutions. head <a href='/viewTimeTable'>here</a> to see what it has generated.<h2></h2>");
+    });
+    app.get("/viewTimeTable", async (req, res) => {
+
+        const {
+            numberOfDays,
+            periodsPerDay,
+            timeTable
+        } = (await SystemParam.find())[0];
+
+        let sendTable = new Map();
+        for (const [key, value] of timeTable) {
+            let table = new Array(numberOfDays),
+                checkingPeriodConsistency = 0;
+            for (let i = 0; i < numberOfDays; i++)
+                table[i] = new Array(periodsPerDay);
+
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    if (value[i][j] == -1)
+                        table[i][j] = "Free period";
+                    else {
+                        //console.log(value[i][j]);
+                        table[i][j] = (await Period.findById(String(value[i][j]).slice(0, 24))).periodName;
+                        checkingPeriodConsistency++;
+                    }
+            let {
+                groupName,
+                periodsAttended
+            } = await Group.findById(key);
+            sendTable.set(groupName, table);
+        }
+
+        res.render("timetable", {
+            sendTable: sendTable,
+            numberOfDays: numberOfDays,
+            periodsPerDay: periodsPerDay
+        });
+    });
+}
 async function deletePeriod(periodId) {
     const period = await Period.findById(mongoose.Types.ObjectId(periodId));
 
@@ -938,7 +980,6 @@ async function intialiseGraph() {
     checkTimeTablePossible();
     console.log("Initialisation Complete");
     //antColonySystemRLF(0, 1, 0.3, 0.05, 1, 0.25, 1, 60);
-    GeneticAlgorithm();
 }
 
 function deletePeriodNode(period) {
@@ -1311,7 +1352,8 @@ function antTripFitness(trip, periods, numberOfDays, periodsPerDay) {
 }
 
 async function GeneticAlgorithm() {
-    const populationSize = 200,
+    console.log("GeneticAlgorithm called.Please wait a few second before going to the view time table page.");
+    const populationSize = 800,
         elite = 20,
         mutationPopulation = 50;
     let groups = await Group.find(),
@@ -1338,10 +1380,12 @@ async function GeneticAlgorithm() {
                 index = 0;
             while (updtMat[Math.floor(index / periodsPerDay)][index % periodsPerDay] !== -1)
                 index++;;
-            for (let perLen = 0; perLen < period.periodLength; perLen++) {
+            for (let perLen = 0; perLen < period.periodLength * period.periodFrequency; perLen++) {
+                console.log(updtMat,index,await Group.findById(groupID));
                 updtMat[Math.floor(index / periodsPerDay)][index % periodsPerDay] = String(period._id) + "Period" + String(perLen);
                 index++;
             }
+            initialTimeTable.set(groupId, updtMat);
         }
     await nextGen.deleteMany({});
     for (let popuitrt = 0; popuitrt < populationSize; popuitrt++)
@@ -1353,10 +1397,9 @@ async function GeneticAlgorithm() {
     //for (const x of nextGeneration)
     //  console.log(timeTableConflicts(x.individual[0], numberOfDays, periodsPerDay, periods));
 
-    nextGeneration = sortTimeTablePopulation(nextGeneration, numberOfDays, 8, periods);
-    for (const x of nextGeneration)
-        console.log(timeTableConflicts(x.individual[0], numberOfDays, periodsPerDay, periods))
-    let bestSoFar = timeTableConflicts(nextGeneration[0].individual[0], numberOfDays, periodsPerDay, periods);
+    nextGeneration = sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods);
+    let bestSoFar = timeTableConflicts(nextGeneration[0].individual[0], numberOfDays, periodsPerDay, periods),
+        generation = 0;
     while (bestSoFar > 0) {
         previousGeneration = await nextGen.find();
         await nextGen.deleteMany({});
@@ -1391,12 +1434,12 @@ async function GeneticAlgorithm() {
             });
         nextGeneration = sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods);
         bestSoFar = timeTableConflicts(nextGeneration[0].individual[0], numberOfDays, periodsPerDay, periods);
-        console.log("Conflicts: " + bestSoFar, nextGeneration.length);
+        console.log("Conflicts: " + bestSoFar, generation++);
+        console.log(await SystemParam.updateMany({}, {
+            timeTable: new Map(nextGeneration[0].individual[0])
+        }));
         //await io.read();
     }
-    new timeTableMongooseModel({
-        timeTable: nextGeneration[0]
-    });
 }
 
 function crossover(timeTableLeft, timeTableRight) {
@@ -1427,7 +1470,7 @@ function mutate(timeTable, numberOfDays, periodsPerDay) {
                             if (schedulerGraph.has(value[Math.floor(i / periodsPerDay)][i % periodsPerDay], value1[Math.floor(i / periodsPerDay)][i % periodsPerDay]))
                                 inConflicted = true;
 
-                if (Math.random() <= inConflicted ? 1 : 0.05) {
+                if (Math.random() <= inConflicted ? 0.2 : 0.05) {
                     [groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay], groupTable[Math.floor(index / periodsPerDay)][index % periodsPerDay]] = [groupTable[Math.floor(index / periodsPerDay)][index % periodsPerDay], groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay]];
                     break;
                 }
@@ -1491,16 +1534,20 @@ function timeTableConflicts(timeTableLeft, numberOfDays, periodsPerDay, periods)
 }
 
 function sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods) {
+    let srthlpr = [];
+    for (let i = 0; i < nextGeneration.length; i++)
+        srthlpr.push({
+            index: i,
+            conflicts: timeTableConflicts(nextGeneration[i].individual[0], numberOfDays, periodsPerDay, periods)
+        });
+    srthlpr.sort((left, right) => {
+        return left.conflicts - right.conflicts
+    });
+    let newGen = [];
     for (let i = 0; i < nextGeneration.length; i++) {
-        if (i === 100 || i === 50 || i === 150 || i == 160 || i == 180)
-            console.log("Sorting " + 100 * i / nextGeneration.length);
-        for (let j = i; j > 0; j--)
-            if (timeTableConflicts(nextGeneration[j].individual[0], numberOfDays, periodsPerDay, periods) < timeTableConflicts(nextGeneration[j - 1].individual[0], numberOfDays, periodsPerDay, periods))
-                nextGeneration = arrayMove(nextGeneration, j, j - 1);
-            else
-                break;
+        newGen.push(nextGeneration[srthlpr[i].index]);
     }
-    return nextGeneration;
+    return newGen;
 }
 
 function getRandomInt(min, max) {
@@ -1516,3 +1563,4 @@ function tournament_selection(left, right) {
             return rndm1 + left;
     }
 }
+

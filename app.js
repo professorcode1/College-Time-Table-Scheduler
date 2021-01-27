@@ -79,6 +79,11 @@ const populationSchema = new mongoose.Schema({
 });
 const nextGen = mongoose.model("nextGen", populationSchema);
 
+const popForTestingSchema = new mongoose.Schema({
+    table: Map
+});
+const PopForTesting = mongoose.model("testJSON", popForTestingSchema);
+
 app.get("/", async (req, res) => {
     if ((await SystemParam.find()).length === 0)
         res.render("getParam", {
@@ -964,7 +969,9 @@ async function intialiseGraph() {
             } else if (period.periodAntiTime.length != 0) {
 
                 for (const antiTime of period.periodAntiTime)
-                    schedulerGraph.set(Number(antiTime), String(period._id) + "Period0");
+                    for (let perLen = 0; perLen < period.periodLength; perLen++)
+                        if (Number(antiTime) + perLen < numberOfDays * periodsPerDay)
+                            schedulerGraph.set(Number(antiTime) + perLen, String(period._id) + "Period" + String(perLen));
             }
         }
 
@@ -980,6 +987,7 @@ async function intialiseGraph() {
     checkTimeTablePossible();
     console.log("Initialisation Complete");
     //antColonySystemRLF(0, 1, 0.3, 0.05, 1, 0.25, 1, 60);
+
 }
 
 function deletePeriodNode(period) {
@@ -1037,7 +1045,9 @@ async function addPerioddNode(period) {
         } else if (period.periodAntiTime.length != 0) {
 
             for (const antiTime of period.periodAntiTime)
-                schedulerGraph.set(Number(antiTime), String(period._id) + "Period0");
+                for (let perLen = 0; perLen < period.periodLength; perLen++)
+                    if (Number(antiTime) + perLen < numberOfDays * periodsPerDay)
+                        schedulerGraph.set(Number(antiTime) + perLen, String(period._id) + "Period" + String(perLen));
         }
     }
 
@@ -1352,10 +1362,9 @@ function antTripFitness(trip, periods, numberOfDays, periodsPerDay) {
 }
 
 async function GeneticAlgorithm() {
-    console.log("GeneticAlgorithm called.Please wait a few second before going to the view time table page.");
-    const populationSize = 800,
-        elite = 20,
-        mutationPopulation = 50;
+    const populationSize = 200,
+        elite = 2,
+        mutationPopulation = 5;
     let groups = await Group.find(),
         periods = await Period.find();
     const {
@@ -1363,35 +1372,19 @@ async function GeneticAlgorithm() {
         periodsPerDay
     } = (await SystemParam.find())[0];
 
-    let initialTimeTable = new Map();
-    for (const period of periods)
-        for (const groupID of period.groupsAttending) {
-            let groupId = String(groupID);
-            if (!initialTimeTable.has(groupId)) {
-                let matrix = new Array(numberOfDays);
-                for (let i = 0; i < numberOfDays; i++)
-                    matrix[i] = new Array(periodsPerDay);
-                for (let i = 0; i < numberOfDays; i++)
-                    for (let j = 0; j < periodsPerDay; j++)
-                        matrix[i][j] = -1;
-                initialTimeTable.set(groupId, matrix);
-            }
-            let updtMat = initialTimeTable.get(groupId),
-                index = 0;
-            while (updtMat[Math.floor(index / periodsPerDay)][index % periodsPerDay] !== -1)
-                index++;;
-            for (let perLen = 0; perLen < period.periodLength * period.periodFrequency; perLen++) {
-                console.log(updtMat,index,await Group.findById(groupID));
-                updtMat[Math.floor(index / periodsPerDay)][index % periodsPerDay] = String(period._id) + "Period" + String(perLen);
-                index++;
-            }
-            initialTimeTable.set(groupId, updtMat);
-        }
+    for (let x = 0; x < populationSize; x++)
+        (new PopForTesting({
+            table: await greedyInititalTimeTableGenerator()
+        }).save());
+    console.log("DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    return
     await nextGen.deleteMany({});
-    for (let popuitrt = 0; popuitrt < populationSize; popuitrt++)
+    for (let popuitrt = 0; popuitrt < populationSize; popuitrt++) {
+        console.log(popuitrt);
         await (new nextGen({
-            individual: new Map(shuffle(initialTimeTable, numberOfDays, periodsPerDay))
+            individual: await greedyInititalTimeTableGenerator()
         })).save();
+    }
     let nextGeneration = await nextGen.find(),
         previousGeneration;
     //for (const x of nextGeneration)
@@ -1564,3 +1557,171 @@ function tournament_selection(left, right) {
     }
 }
 
+async function greedyInititalTimeTableGenerator() {
+    periods = await Period.find();
+    groups = await Group.find();
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+
+    let periodsByLength = new Map();
+    for (let i = 1; i <= periodsPerDay; i++)
+        periodsByLength.set(i, new Array(0));
+    for (const period of periods) {
+        let arr = periodsByLength.get(Number(period.periodLength));
+        arr.push(period);
+        periodsByLength.set(Number(period.periodLength), [...arr]);
+    }
+    for (let i = 1; i <= periodsPerDay; i++) {
+        let arr = randomArray(periodsByLength.get(i));
+        periodsByLength.set(i, arr);
+    }
+
+    let initialTimeTable = new Map();
+    for (const group of groups) {
+        let matrix = new Array(numberOfDays);
+        for (let i = 0; i < numberOfDays; i++)
+            matrix[i] = new Array(periodsPerDay);
+        for (let i = 0; i < numberOfDays; i++)
+            for (let j = 0; j < periodsPerDay; j++)
+                matrix[i][j] = -1;
+        initialTimeTable.set(String(group._id), matrix);
+    }
+
+    for (let periodsperday = periodsPerDay; periodsperday > 0; periodsperday--) {
+        let periodsOfThisLength = periodsByLength.get(periodsperday);
+        if (periodsOfThisLength.length === 0)
+            continue;
+        let frePrdCombLen = new Map();
+        for (const [key, value] of initialTimeTable)
+            frePrdCombLen.set(key, new Set());
+
+        for (const [key, value] of frePrdCombLen) {
+            let frePrd = new Array(),
+                combOutput = new Array(periodsperday);
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    if (initialTimeTable.get(key)[i][j] === -1)
+                        frePrd.push(periodsPerDay * i + j);
+
+            async function combinationUtil(start, index) {
+                if (index == periodsperday) {
+                    frePrdCombLen.get(key).add([...combOutput]);
+                    //console.log(frePrdCombLen.get(key));
+                    //await io.read();
+                    return
+                }
+
+                for (let i = start; i + 1 <= frePrd.length &&
+                    frePrd.length - i >= periodsperday - index; i++) {
+                    combOutput[index] = frePrd[i];
+                    await combinationUtil(i + 1, index + 1);
+                }
+            }
+
+            await combinationUtil(0, 0);
+        }
+
+        for (const period of periodsOfThisLength)
+            for (let frqCnt = 0; frqCnt < period.periodFrequency; frqCnt++) {
+                let bestFitness = -Infinity,
+                    bestChoice;
+                //selecting which assortment of periods will be best
+                {
+                    let choice = new Array(period.groupsAttending.length);
+                    async function chosBestPrdAsrtmnt(level) {
+                        if (level === period.groupsAttending.length) {
+                            //console.log(choice);
+                            //await io.read();
+                            let fitness = 0;
+                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
+                                let priorityOne = true;
+                                for (let perLen = 0; perLen < period.periodLength - 1; perLen++)
+                                    priorityOne = priorityOne && choice[grpNum][perLen] === choice[grpNum][perLen + 1] - 1;
+                                priorityOne = priorityOne && choice[grpNum][0] <= periodsPerDay - period.periodLength;
+                                if (priorityOne)
+                                    fitness += 100000;
+                            }
+
+                            let priorityTwoHlpr = new Array(0),
+                                priorityTwo = true;
+                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
+                                priorityTwoHlpr.push(choice[grpNum][0]);
+                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
+                                priorityTwo = priorityTwo && priorityTwoHlpr[grpNum] === priorityTwoHlpr[0];
+                            if (priorityTwo)
+                                fitness += 10000;
+
+                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
+                                for (let perLen = 0; perLen < period.periodLength; perLen++) {
+                                    fitness += schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen)) ? -100 : 0;
+                                    //console.log(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen));
+                                    //console.log(schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period"+String(perLen)));
+                                    //await io.read();
+                                }
+
+                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
+                                for (let perLen = 0; perLen < period.periodLength; perLen++)
+                                    for (const [key1, value1] of initialTimeTable) {
+                                        let day = Math.floor(choice[grpNum][perLen] / periodsPerDay),
+                                            hour = choice[grpNum][perLen] % periodsPerDay;
+                                        fitness += schedulerGraph.has(value1[day][hour], String(period._id) + "Period" + String(perLen)) ? -99 : 0;
+                                        //console.log(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen));
+                                        //console.log(schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period"+String(perLen)));
+                                        //await io.read();
+                                    }
+
+                            if (fitness >= bestFitness) {
+                                bestFitness = fitness;
+                                bestChoice = [...choice];
+                            }
+                            return;
+                        }
+                        let grpChoiceSet = frePrdCombLen.get(String(period.groupsAttending[level]));
+                        for (const setItrt of grpChoiceSet) {
+                            choice[level] = setItrt;
+                            //console.log(setItrt);
+                            await chosBestPrdAsrtmnt(level + 1);
+                        }
+                    }
+                    await chosBestPrdAsrtmnt(0);
+                }
+                //putting the best choice into the time table
+                for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
+                    for (let perLen = 0; perLen < period.periodLength; perLen++) {
+                        let day = Math.floor(bestChoice[grpNum][perLen] / periodsPerDay),
+                            hour = bestChoice[grpNum][perLen] % periodsPerDay;
+                        initialTimeTable.get(String(period.groupsAttending[grpNum]))[day][hour] = String(period._id) + "Period" + String(perLen);
+                    }
+                    //console.log(initialTimeTable.get(String(period.groupsAttending[grpNum])));
+                    //await io.read();
+                }
+
+
+                console.log(bestChoice, bestFitness);
+                //await io.read();
+                // console.log(period);
+                // await io.read();
+                // console.log(initialTimeTable);
+                // await io.read();
+                //updating frePrdCombLen
+                for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
+                    for (let perLen = 0; perLen < period.periodLength; perLen++) {
+                        for (const setItrt of frePrdCombLen.get(String(period.groupsAttending[grpNum]))) {
+                            if (setItrt.includes(bestChoice[grpNum][perLen])) {
+                                1 + 1;
+                                frePrdCombLen.get(String(period.groupsAttending[grpNum])).delete(setItrt);
+                                //console.log(setItrt);
+                                //await io.read();
+                            }
+                        }
+                    }
+                }
+
+            }
+        console.log("Target Length::" + periodsperday);
+
+    }
+    return initialTimeTable;
+}

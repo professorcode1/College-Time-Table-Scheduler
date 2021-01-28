@@ -1305,8 +1305,8 @@ async function mutateColoring(coloring, completeGraph, numberOfDays, periodsPerD
             for (let j = 0; j < i; j++)
                 if (completeGraph.has(thisColor[i], thisColor[j]))
                     periodsInConflict.add(thisColor[i].slice(0, 24));
-            if (completeGraph.has(hour, thisColor[i].slice(0,24)))
-                periodsInConflict.add(thisColor[i]);
+            if (completeGraph.has(hour, thisColor[i]))
+                periodsInConflict.add(thisColor[i].slice(0,24));
         }
     }
     let hlprarr = new Array([...periodsInConflict]);

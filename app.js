@@ -5,7 +5,10 @@ const app = express();
 const graph = require("graph");
 const io = require('console-read-write');
 const arrayMove = require("array-move");
-const randomArray = require('array-random')
+const randomArray = require('array-random');
+const {
+    mutate
+} = require("array-move");
 app.use(bodyParser.urlencoded({
     extended: true
 }));
@@ -73,16 +76,6 @@ const periodSchema = new mongoose.Schema({
     }
 });
 const Period = mongoose.model("period", periodSchema);
-
-const populationSchema = new mongoose.Schema({
-    individual: [Map]
-});
-const nextGen = mongoose.model("nextGen", populationSchema);
-
-const popForTestingSchema = new mongoose.Schema({
-    table: Map
-});
-const PopForTesting = mongoose.model("testJSON", popForTestingSchema);
 
 app.get("/", async (req, res) => {
     if ((await SystemParam.find()).length === 0)
@@ -664,7 +657,10 @@ app.post("/systemParams", async (req, res) => {
 {
     app.get("/makeTimeTable", async (req, res) => {
         GeneticAlgorithm();
-        res.send(" <h1>Pease do not reload on this page as that will break everything!</h1> Algorithm started.See console to check if it has generated a potential solutions. head <a href='/viewTimeTable'>here</a> to see what it has generated.<h2></h2>");
+        res.write(" <h1>Pease do not reload on this page as that will break everything!</h1>");
+        res.write("Algorithm started.See console to check if it has generated a potential solutions.");
+        res.write("head <a href='/viewTimeTable'>here</a> to see what it has generated.<h2></h2>");
+        res.send();
     });
     app.get("/viewTimeTable", async (req, res) => {
 
@@ -1141,409 +1137,225 @@ async function checkTimeTablePossible() {
     }
 }
 
-//ACS on RLF. The paramaters,pheramon update, and fitness function are unintelligent.
-//The can be improved using Numerical analyis, multivar Cal, Lenear algebra, and theoretical newtork analysis.
-//I only have really little amounts of those rn. Will come back to this later.
-async function antColonySystemRLF(alpha, beta, Qnot, Epsilon, Row, tripRestartProbability, initialPheramonValue, numberOfAnts) {
-    const parentGraphsNodes = schedulerGraph._vertices;
-    const {
-        numberOfDays,
-        periodsPerDay
-    } = (await SystemParam.find())[0];
-    const periods = await Period.find();
-
-    const coloringGraph = new graph.Graph();
-    for (const nodeOne in schedulerGraph._graph)
-        for (const nodeTwo in schedulerGraph._graph)
-            if (!schedulerGraph.has(nodeOne, nodeTwo))
-                coloringGraph.set(nodeOne, nodeTwo, initialPheramonValue);
-
-    let solutionBestSoFar, fitnessOfSolutionBestSoFar = 0;
-    for (let generations = 0; fitnessOfSolutionBestSoFar < 99; generations++) {
-
-        let antTrips = new Array(numberOfAnts);
-        for (let antNumber = 0; antNumber < numberOfAnts; antNumber++) {
-            antTrips[antNumber] = new Object();
-            antTrips[antNumber].coloring = new Map();
-            antTrips[antNumber].unColored = new Set(schedulerGraph._vertices);
-            let antStartingChoices = ([...antTrips[antNumber].unColored]).filter(ele => String(ele).length < 24);
-            antTrips[antNumber].neighborOfColored = new Set();
-            antTrips[antNumber].ant = antStartingChoices[Math.floor(Math.random() * antStartingChoices.length)]
-            antTrips[antNumber].color = Number(antTrips[antNumber].ant);
-            antTrips[antNumber].coloring.set(antTrips[antNumber].color, new Array(0));
-            antTrips[antNumber].unColored.delete(antTrips[antNumber].ant);
-
-            antTrips[antNumber].messageForOtherColor = new Map();
-            for (let numOfPer = 0; numOfPer < numberOfDays * periodsPerDay; numOfPer++)
-                antTrips[antNumber].messageForOtherColor.set(numOfPer, new Array(0));
-        }
-        while (true) {
-            let allAntsHaveCompletedTheirTrips = true;
-            for (let antNumber = 0; antNumber < numberOfAnts; antNumber++)
-                allAntsHaveCompletedTheirTrips = allAntsHaveCompletedTheirTrips && antTrips[antNumber].unColored.size === 0;
-            if (allAntsHaveCompletedTheirTrips)
-                break;
-            for (let antNumber = 0; antNumber < numberOfAnts; antNumber++) {
-                let nextAntStop = new Map();
-                //Colorable Neighbor => Connected by No edge. Neighbor => Connected by edge.
-                for (const antColorableNeighbor in coloringGraph._graph[antTrips[antNumber].ant])
-                    if (antTrips[antNumber].unColored.has(antColorableNeighbor) && (!antTrips[antNumber].neighborOfColored.has(antColorableNeighbor)) && (!schedulerGraph.has(antColorableNeighbor, antTrips[antNumber].color))) {
-
-                        let pheramon = coloringGraph.get(antColorableNeighbor, antTrips[antNumber].ant),
-                            deg_a_antNeighbor = 0;
-                        for (const antColorableNeighborsNeighbor in schedulerGraph._graph[antColorableNeighbor])
-                            if (antTrips[antNumber].unColored.has(antColorableNeighborsNeighbor))
-                                deg_a_antNeighbor++;
-                        let heuristic = antTrips[antNumber].unColored.size - deg_a_antNeighbor; //heuristic can be 1)deg_in_neighborOfCOlored of antNeighbor OR 2)unColored.size - deg_a_antNeighbor OR 3)deg_in_uncolored_Union_neighborOfColored_of_antNeighbor
-                        //if (antNumber === 1)
-                        //console.log(heuristic);
-
-                        let transitionValue = Math.pow(pheramon, alpha) * Math.pow(heuristic, beta);
-                        nextAntStop.set(antColorableNeighbor, transitionValue);
-                    }
-                //if (antNumber === 1)
-                // console.log("\n");
-                if (nextAntStop.size === 0 || Math.random() < tripRestartProbability) {
-                    if (antTrips[antNumber].unColored.size === 0)
-                        continue;
-
-                    let antStartingChoices = ([...antTrips[antNumber].unColored]).filter(ele => String(ele).length < 24);
-                    antTrips[antNumber].neighborOfColored = new Set();
-                    if (antStartingChoices.length > 0) {
-                        antTrips[antNumber].ant = antStartingChoices[Math.floor(Math.random() * antStartingChoices.length)]
-                        antTrips[antNumber].color = Number(antTrips[antNumber].ant);
-                        antTrips[antNumber].unColored.delete(antTrips[antNumber].ant);
-                        antTrips[antNumber].coloring.set(antTrips[antNumber].color, new Array(0));
-                    } else {
-                        if (antTrips[antNumber].color >= numberOfDays * periodsPerDay)
-                            antTrips[antNumber].color = antTrips[antNumber].color + 1;
-                        else
-                            antTrips[antNumber].color = numberOfDays * periodsPerDay;
-                        antTrips[antNumber].ant = ([...antTrips[antNumber].unColored])[Math.floor(Math.random() * antStartingChoices.length)];
-                        antTrips[antNumber].unColored.delete(antTrips[antNumber].ant);
-                        antTrips[antNumber].coloring.set(antTrips[antNumber].color, [antTrips[antNumber].ant]);
-                        for (const antsNeighbor in schedulerGraph._graph[antTrips[antNumber].ant])
-                            antTrips[antNumber].neighborOfColored.add(antsNeighbor);
-
-                        antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color, new Array(0));
-
-
-
-                        let {
-                            periodLength: thisAntsPeriodLength
-                        } = await Period.findById(String(antTrips[antNumber].ant).slice(0, 24));
-                        let thisAntPeriodNumber = Number(String(antTrips[antNumber].ant).slice(30));
-
-                        for (let messageForPreviosPeriods = thisAntPeriodNumber - 1; messageForPreviosPeriods >= 0; messageForPreviosPeriods--) {
-                            //console.log(antTrips[antNumber].color - messageForPreviosPeriods, antTrips[antNumber].color, messageForPreviosPeriods, String(antTrips[antNumber].ant));
-                            antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color - messageForPreviosPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color - messageForPreviosPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForPreviosPeriods)]);
-                        }
-                        if (antTrips[antNumber].color < numberOfDays * periodsPerDay)
-                            for (let messageForNextPeriods = thisAntPeriodNumber + 1; messageForNextPeriods < thisAntsPeriodLength; messageForNextPeriods++) {
-                                //console.log(antTrips[antNumber].color + messageForNextPeriods, antTrips[antNumber].color, messageForNextPeriods, String(antTrips[antNumber].ant));
-                                antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color + messageForNextPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color + messageForNextPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForNextPeriods)]);
-                            }
-                    }
-                    continue;
-                }
-                let nextAnt; //check if there is any message for this color asking it to pick a speicfic node
-                for (const [transitionChoice, transitionValue] of nextAntStop) {
-                    if (antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color).includes(transitionChoice)) {
-                        nextAnt = transitionChoice;
-                        break;
-                    }
-                }
-                if (!nextAnt) {
-                    if (Math.random() < Qnot) {
-                        let bestTransitionValue = -1;
-                        for (const [transitionChoice, transitionValue] of nextAntStop) {
-                            if (transitionValue > bestTransitionValue) {
-                                bestTransitionValue = transitionValue;
-                                nextAnt = transitionChoice;
-                            }
-                        }
-                    } else {
-                        let cumilativeTransitionValue = 0;
-                        for (const transitionValue of nextAntStop.values())
-                            cumilativeTransitionValue += transitionValue;
-
-                        let antChoice = Math.random() * cumilativeTransitionValue;
-
-                        cumilativeTransitionValue = 0;
-                        for (const [transitionChoice, transitionValue] of nextAntStop) {
-                            nextAnt = transitionChoice;
-                            cumilativeTransitionValue += transitionValue;
-                            if (cumilativeTransitionValue >= transitionValue)
-                                break;
-                        }
-                    }
-                }
-                //Local Pheramon Update
-                const localPhreramonUpdate = (1 - Epsilon) * coloringGraph.get(antTrips[antNumber].ant, nextAnt) + Epsilon * (initialPheramonValue * 2);
-                coloringGraph.set(antTrips[antNumber].ant, nextAnt, localPhreramonUpdate);
-
-
-                antTrips[antNumber].ant = nextAnt;
-                antTrips[antNumber].unColored.delete(antTrips[antNumber].ant);
-                antTrips[antNumber].coloring.set(antTrips[antNumber].color, [...antTrips[antNumber].coloring.get(antTrips[antNumber].color), antTrips[antNumber].ant]);
-                for (const antsNeighbor in schedulerGraph._graph[antTrips[antNumber].ant])
-                    antTrips[antNumber].neighborOfColored.add(antsNeighbor);
-
-                let {
-                    periodLength: thisAntsPeriodLength
-                } = await Period.findById(String(antTrips[antNumber].ant).slice(0, 24));
-                let thisAntPeriodNumber = Number(String(antTrips[antNumber].ant).slice(30));
-
-                for (let messageForPreviosPeriods = thisAntPeriodNumber - 1; messageForPreviosPeriods >= 0; messageForPreviosPeriods--) {
-                    //console.log(antTrips[antNumber].color - messageForPreviosPeriods, antTrips[antNumber].color, messageForPreviosPeriods, String(antTrips[antNumber].ant));
-                    antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color - messageForPreviosPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color - messageForPreviosPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForPreviosPeriods)]);
-                }
-                if (antTrips[antNumber].color < numberOfDays * periodsPerDay)
-                    for (let messageForNextPeriods = thisAntPeriodNumber + 1; messageForNextPeriods < thisAntsPeriodLength; messageForNextPeriods++)
-                        antTrips[antNumber].messageForOtherColor.set(antTrips[antNumber].color + messageForNextPeriods, [...antTrips[antNumber].messageForOtherColor.get(antTrips[antNumber].color + messageForNextPeriods), String(antTrips[antNumber].ant).slice(0, 30) + String(messageForNextPeriods)]);
-
-            }
-        }
-        //global pheramon update and Evaluating Success
-        //if (!solutionBestSoFar) {
-        solutionBestSoFar = antTrips[0].coloring;
-        fitnessOfSolutionBestSoFar = antTripFitness(solutionBestSoFar, periods, numberOfDays, periodsPerDay);
-        //}
-        for (let antNumber = 0; antNumber < numberOfAnts; antNumber++) {
-            thisTripsFitness = antTripFitness(antTrips[antNumber].coloring, periods, numberOfDays, periodsPerDay);
-            if (thisTripsFitness > fitnessOfSolutionBestSoFar) {
-                fitnessOfSolutionBestSoFar = thisTripsFitness;
-                solutionBestSoFar = antTrips[antNumber].coloring;
-            }
-        }
-
-        for (const edgeStart in coloringGraph._graph)
-            for (const edgeEnd in coloringGraph._graph)
-                if (coloringGraph.has(edgeStart, edgeEnd)) {
-                    const pheramonAfterEvaporation = Math.sqrt(1 - Row) * coloringGraph.get(edgeStart, edgeEnd);
-                    coloringGraph.set(edgeStart, edgeEnd, pheramonAfterEvaporation);
-                }
-
-        for (const [key, value] of solutionBestSoFar)
-            for (let colorPeriodArrayItrt = 1; colorPeriodArrayItrt < value.length; colorPeriodArrayItrt++)
-                for (let colorPeriodArrayItrt1 = 0; colorPeriodArrayItrt1 < colorPeriodArrayItrt; colorPeriodArrayItrt1++) {
-                    let pheramonAfterEnforcment = coloringGraph.get(value[colorPeriodArrayItrt], value[colorPeriodArrayItrt1]);
-                    pheramonAfterEnforcment += Row * (fitnessOfSolutionBestSoFar + 10);
-                    coloringGraph.set(value[colorPeriodArrayItrt], value[colorPeriodArrayItrt1], pheramonAfterEnforcment);
-                }
-        console.log(solutionBestSoFar);
-        console.log("Generation::" + generations + "    Fitness::" + fitnessOfSolutionBestSoFar + "\n\n");
-
-        //await io.read();
-    }
-}
-
-function antTripFitness(trip, periods, numberOfDays, periodsPerDay) {
-    let sickness = trip.size - (numberOfDays * periodsPerDay);
-    if (sickness < 0)
-        sickness = 0;
-    for (const period of periods)
-        if (Number(period.periodLength) > 1) {
-            let periodConsecutiveCheck = [];
-            for (let len = 0; len < Number(period.periodLength); len++) {
-                let thisPeriodTime = 0;
-                for (const [key, value] of trip)
-                    if (value.includes((period._id) + "Period" + String(len))) {
-                        thisPeriodTime = key;
-                        break;
-                    }
-                periodConsecutiveCheck.push(thisPeriodTime);
-            }
-            for (let periodConsecutiveCheckItrt = 1; periodConsecutiveCheckItrt < periodConsecutiveCheck.length; periodConsecutiveCheckItrt++)
-                if (periodConsecutiveCheck[periodConsecutiveCheckItrt] - periodConsecutiveCheck[periodConsecutiveCheckItrt - 1] !== 1)
-                    sickness += 1;
-        }
-    return 100 / (1 + sickness);
-}
-
 async function GeneticAlgorithm() {
     const populationSize = 200,
-        elite = 2,
-        mutationPopulation = 5;
-    let groups = await Group.find(),
-        periods = await Period.find();
+        elitePopulation = 20,
+        mutationPopulation = 25;
     const {
         numberOfDays,
         periodsPerDay
     } = (await SystemParam.find())[0];
-
-    for (let x = 0; x < populationSize; x++)
-        (new PopForTesting({
-            table: await greedyInititalTimeTableGenerator()
-        }).save());
-    console.log("DONE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    return
-    await nextGen.deleteMany({});
-    for (let popuitrt = 0; popuitrt < populationSize; popuitrt++) {
-        console.log(popuitrt);
-        await (new nextGen({
-            individual: await greedyInititalTimeTableGenerator()
-        })).save();
-    }
-    let nextGeneration = await nextGen.find(),
+    let completeGraph = await CompleteGraph(),
+        nextGeneration = new Array(populationSize),
         previousGeneration;
-    //for (const x of nextGeneration)
-    //  console.log(timeTableConflicts(x.individual[0], numberOfDays, periodsPerDay, periods));
+    for (let pop = 0; pop < populationSize; pop++) {
+        console.log("Creating Individual::" + pop + " of " + populationSize);
+        nextGeneration[pop] = await GraphColorRandom(completeGraph);
+    }
+    nextGeneration.sort((left, right) => fitness(left, completeGraph, numberOfDays, periodsPerDay) - fitness(right, completeGraph, numberOfDays, periodsPerDay));
+    let bestFitness = fitness(nextGeneration[0], completeGraph, numberOfDays, periodsPerDay),
+        bestSolution = createDeepCopyMap(nextGeneration[0]);
+    while (bestFitness > 0) {
+        previousGeneration = createDeepCopyArrayOfMaps(nextGeneration);
+        nextGeneration = nextGeneration.splice(0, elitePopulation);
 
-    nextGeneration = sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods);
-    let bestSoFar = timeTableConflicts(nextGeneration[0].individual[0], numberOfDays, periodsPerDay, periods),
-        generation = 0;
-    while (bestSoFar > 0) {
-        previousGeneration = await nextGen.find();
-        await nextGen.deleteMany({});
-        nextGeneration = nextGeneration.splice(0, elite);
-        for (let i = 0; i < elite; i++) {
-            (new nextGen({
-                individual: nextGeneration[i].individual
-            })).save();
-        }
         //crossover
-        while (nextGeneration.length < populationSize) {
-            let index1 = tournament_selection(0, populationSize - 1),
-                index2 = tournament_selection(0, populationSize - 1),
-                newTable = crossover(previousGeneration[index1].individual[0], previousGeneration[index2].individual[0]);
-            nextGeneration.push(await (new nextGen({
-                individual: newTable
-            })).save());
-        }
-        // for (const x of nextGeneration)
-        //     console.log(timeTableConflicts(x.individual[0], numberOfDays, periodsPerDay, periods))
+        while (nextGeneration.length < populationSize)
+            nextGeneration.push(await crossOver(previousGeneration[tournament_selection(0, populationSize - 1)], previousGeneration[tournament_selection(0, populationSize - 1)]));
+
         //mutation
-        for (let mutation = 0; mutation < mutationPopulation; mutation++) {
-            //console.log(nextGeneration.length, mutation)
-            nextGeneration.push(await (new nextGen({
-                individual: new Map(mutate(nextGeneration[mutation].individual[0], numberOfDays, periodsPerDay))
-            })).save());
-        }
-        let toBeDeleted = nextGeneration.splice(0, mutationPopulation);
-        for (const deleted of toBeDeleted)
-            await nextGen.deleteOne({
-                _id: deleted._id
-            });
-        nextGeneration = sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods);
-        bestSoFar = timeTableConflicts(nextGeneration[0].individual[0], numberOfDays, periodsPerDay, periods);
-        console.log("Conflicts: " + bestSoFar, generation++);
-        console.log(await SystemParam.updateMany({}, {
-            timeTable: new Map(nextGeneration[0].individual[0])
-        }));
+        for (let mut = 0; mut < mutationPopulation; mut++)
+            await mutateColoring(nextGeneration[getRandomInt(0, populationSize)], completeGraph, numberOfDays, periodsPerDay);
+
+        nextGeneration.sort((left, right) => fitness(left, completeGraph, numberOfDays, periodsPerDay) - fitness(right, completeGraph, numberOfDays, periodsPerDay));
+
+        bestFitness = fitness(nextGeneration[0], completeGraph, numberOfDays, periodsPerDay);
+        bestSolution = createDeepCopyMap(nextGeneration[0]);
+        await updateTimeTable(bestSolution);
+        console.log(bestFitness);
         //await io.read();
     }
 }
 
-function crossover(timeTableLeft, timeTableRight) {
-    let returnStuff = new Map();
-    for (const [key, value] of timeTableLeft)
-        if (Math.random() < 0.5)
-            returnStuff.set(key, value);
-        else
-            returnStuff.set(key, timeTableRight.get(key));
-    return returnStuff;
-}
-
-function mutate(timeTable, numberOfDays, periodsPerDay) {
-    let returnTable = new Map();
-    for (const [key, value] of timeTable) {
-        let groupTable = value;
-        if (Math.random() < 0.1) {
-            for (let i = 0; i < numberOfDays * periodsPerDay; i++) {
-                let index = getRandomInt(i, numberOfDays * periodsPerDay);
-                let inConflicted = false;
-                if (value[Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1)
-                    if (schedulerGraph.has(value[Math.floor(i / periodsPerDay)][i % periodsPerDay], i))
-                        inConflicted = true;
-
-                if (!inConflicted)
-                    for (const [key1, value1] of timeTable)
-                        if (value[Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1 && value1[Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1)
-                            if (schedulerGraph.has(value[Math.floor(i / periodsPerDay)][i % periodsPerDay], value1[Math.floor(i / periodsPerDay)][i % periodsPerDay]))
-                                inConflicted = true;
-
-                if (Math.random() <= inConflicted ? 0.2 : 0.05) {
-                    [groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay], groupTable[Math.floor(index / periodsPerDay)][index % periodsPerDay]] = [groupTable[Math.floor(index / periodsPerDay)][index % periodsPerDay], groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay]];
-                    break;
-                }
-            }
-        }
-        returnTable.set(key, groupTable);
+async function updateTimeTable(bestSolution) {
+    const groups = await Group.find();
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+    let groupMap = new Map();
+    for (const group of groups) {
+        let arr = new Array(numberOfDays);
+        for (let i = 0; i < numberOfDays; i++)
+            arr[i] = new Array(periodsPerDay);
+        for (let i = 0; i < numberOfDays; i++)
+            for (let j = 0; j < periodsPerDay; j++)
+                arr[i][j] = -1;
+        groupMap.set(String(group._id), arr);
     }
-    return new Map(returnTable);
-}
-
-function shuffle(timeTable, numberOfDays, periodsPerDay) {
-    let returnTable = new Map();
-    for (const [key, value] of timeTable) {
-        let groupTable = value;
-        for (let i = 0; i < numberOfDays * periodsPerDay; i++) {
-            let rndm = getRandomInt(i, numberOfDays * periodsPerDay);
-            temp = groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay];
-            groupTable[Math.floor(i / periodsPerDay)][i % periodsPerDay] = groupTable[Math.floor(rndm / periodsPerDay)][rndm % periodsPerDay];
-            groupTable[Math.floor(rndm / periodsPerDay)][rndm % periodsPerDay] = temp;
-        }
-        returnTable.set(key, groupTable);
-    }
-    return new Map(returnTable);
-}
-
-function timeTableConflicts(timeTableLeft, numberOfDays, periodsPerDay, periods) {
-    let conflicts = 0,
-        threeDMat = new Array(0);
-    for (const [key, value] of timeTableLeft)
-        threeDMat.push(value);
-    for (let i = 0; i < numberOfDays * periodsPerDay; i++) {
-        for (let grpNum = 0; grpNum < timeTableLeft.size; grpNum++) {
-
-            if (threeDMat[grpNum][Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1)
-                if (schedulerGraph.has(threeDMat[grpNum][Math.floor(i / periodsPerDay)][i % periodsPerDay], i))
-                    conflicts++
-
-            for (let grpNum1 = 0; grpNum1 < grpNum; grpNum1++) {
-                if (threeDMat[grpNum][Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1 && threeDMat[grpNum1][Math.floor(i / periodsPerDay)][i % periodsPerDay] !== -1)
-                    if (schedulerGraph.has(threeDMat[grpNum][Math.floor(i / periodsPerDay)][i % periodsPerDay], threeDMat[grpNum1][Math.floor(i / periodsPerDay)][i % periodsPerDay]))
-                        conflicts++;
-            }
+    for (const [key, value] of bestSolution) {
+        const period = await Period.findById(key.slice(0, 24));
+        for (const groupId of period.groupsAttending) {
+            groupMap.get(String(groupId))[Math.floor(value / periodsPerDay)][value % periodsPerDay] = key;
         }
     }
+    await SystemParam.updateMany({}, {
+        timeTable: groupMap
+    });
+}
+async function CompleteGraph() {
+    const periods = await Period.find();
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+    let compGrp = new graph.Graph();
+
+    for (let i = 0; i < numberOfDays * periodsPerDay; i++)
+        for (let j = 0; j < i; j++)
+            compGrp.set(i, j);
+
     for (const period of periods)
-        if (period.periodLength > 1)
-            for (const groupId of period.groupsAttending) {
-                let twoDMat1 = timeTableLeft.get(String(groupId));
-                let p = [];
-                for (let len = 0; len < period.periodLength; len++)
-                    for (let i = 0; i < numberOfDays * periodsPerDay; i++)
-                        if (twoDMat1[Math.floor(i / periodsPerDay)][i % periodsPerDay] === String(period._id) + "Period" + String(len)) {
-                            p.push(i);
-                            break;
-                        }
-                for (let len = 1; len < p.length; len++)
-                    if (p[len] !== p[len - 1])
-                        conflicts++;
+        for (let freq = 0; freq < Number(period.periodFrequency); freq++)
+            for (let len = 0; len < Number(period.periodLength); len++) {
+                const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
+
+                for (let freq1 = 0; freq1 < freq; freq1++)
+                    for (let len1 = 0; len1 < Number(period.periodLength); len1++)
+                        compGrp.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
+
+                for (const neighborNode in schedulerGraph.adj(String(period._id) + "Period" + String(len)))
+                    if (String(neighborNode).length > 24) {
+                        let neighborPeriod = await Period.findById(neighborNode.slice(0, 24));
+                        for (let freq1 = 0; freq1 < neighborPeriod.periodLength; freq1++)
+                            compGrp.set(thisPeriodNode, neighborNode + "Freq" + String(freq1));
+                    } else
+                        compGrp.set(thisPeriodNode, neighborNode);
+
             }
+    return compGrp;
+}
+async function GraphColorRandom(completeGraph) {
+    let coloring = new Map();
+    const periods = randomArray(await Period.find());
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+    for (const period of periods) {
+        let potentialHours = new Array(0);
+        for (let hour = 0; hour < numberOfDays * periodsPerDay; hour++)
+            if (!schedulerGraph.has(hour, String(period._id) + "Period0"))
+                potentialHours.push(hour);
+        potentialHours = randomArray(potentialHours);
+        for (let freq = 0; freq < Number(period.periodFrequency); freq++)
+            for (let len = 0; len < Number(period.periodLength); len++)
+                coloring.set(String(period._id) + "Period" + String(len) + "Freq" + String(freq), potentialHours[freq] + len);
+    }
+    return coloring;
+}
+async function RLFRandom(completeGraph) {
+    let coloring = new Map(),
+        messageForColor = new Map();
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = (await SystemParam.find())[0];
+    for (let color = 0; color < numberOfDays * periodsPerDay; color++)
+        messageForColor.set(color, new Set());
+
+    let unColored = new Set(await Period.find());
+    for (let color = 0; color < numberOfDays * periodsPerDay; color++) {
+        let neighborOfColord = new Set(),
+            potentialyColorable = new Set([...unColored]);
+        for (const message of messageForColor.get(color)) {
+
+        }
+        while (potentialyColorable.size > 0);
+
+    }
+}
+
+function fitness(coloring, completeGraph, numberOfDays, periodsPerDay) {
+    let conflicts = 0;
+    for (let hour = 0; hour < numberOfDays * periodsPerDay; hour++) {
+        let thisColor = new Array();
+        for (const [key, value] of coloring)
+            if (Number(value) === hour)
+                thisColor.push(key);
+        for (let i = 0; i < thisColor.length; i++) {
+            for (let j = 0; j < i; j++)
+                if (completeGraph.has(thisColor[i], thisColor[j]))
+                    conflicts++;
+            if (completeGraph.has(hour, thisColor[i]))
+                conflicts++
+        }
+    }
     return conflicts;
 }
 
-function sortTimeTablePopulation(nextGeneration, numberOfDays, periodsPerDay, periods) {
-    let srthlpr = [];
-    for (let i = 0; i < nextGeneration.length; i++)
-        srthlpr.push({
-            index: i,
-            conflicts: timeTableConflicts(nextGeneration[i].individual[0], numberOfDays, periodsPerDay, periods)
-        });
-    srthlpr.sort((left, right) => {
-        return left.conflicts - right.conflicts
-    });
-    let newGen = [];
-    for (let i = 0; i < nextGeneration.length; i++) {
-        newGen.push(nextGeneration[srthlpr[i].index]);
+async function mutateColoring(coloring, completeGraph, numberOfDays, periodsPerDay) {
+    let periodsInConflict = new Set();
+    for (let hour = 0; hour < numberOfDays * periodsPerDay; hour++) {
+        let thisColor = new Array();
+        for (const [key, value] of coloring)
+            if (Number(value) === hour)
+                thisColor.push(key);
+        for (let i = 0; i < thisColor.length; i++) {
+            for (let j = 0; j < i; j++)
+                if (completeGraph.has(thisColor[i], thisColor[j]))
+                    periodsInConflict.add(thisColor[i].slice(0, 24));
+            if (completeGraph.has(hour, thisColor[i].slice(0,24)))
+                periodsInConflict.add(thisColor[i]);
+        }
     }
-    return newGen;
+    let hlprarr = new Array([...periodsInConflict]);
+    const period = await Period.findById(randomArray(hlprarr)[0]);
+    let potentialHours = new Array(0);
+    for (let hour = 0; hour < numberOfDays * periodsPerDay; hour++)
+        if (period) {
+            if (!schedulerGraph.has(hour, String(period._id) + "Period0"))
+                potentialHours.push(hour);
+        }
+    else {
+        console.log(periodsInConflict, "\n\n\n", hlprarr);
+        return;
+    }
+    potentialHours = randomArray(potentialHours);
+    const freq = getRandomInt(0, period.periodFrequency);
+    for (let len = 0; len < Number(period.periodLength); len++)
+        coloring.set(String(period._id) + "Period" + String(len) + "Freq" + String(freq), potentialHours[freq] + len);
+}
+async function crossOver(coloring1, coloring2) {
+    let coloring = new Map();
+    const periods = await Period.find();
+    for (const period of periods)
+        for (let freq = 0; freq < period.periodFrequency; freq++)
+            if (Math.random() > 0.5)
+                for (let len = 0; len < period.periodLength; len++)
+                    coloring.set(String(period._id) + "Period" + String(len) + "Freq" + String(freq), coloring1.get(String(period._id) + "Period" + String(len) + "Freq" + String(freq)));
+            else
+                for (let len = 0; len < period.periodLength; len++)
+                    coloring.set(String(period._id) + "Period" + String(len) + "Freq" + String(freq), coloring2.get(String(period._id) + "Period" + String(len) + "Freq" + String(freq)));
+    return coloring;
+}
+
+function createDeepCopyMap(initialMap) {
+    let returnMap = new Map();
+    for (const [key, value] of initialMap)
+        returnMap.set(key, value);
+    return returnMap;
+}
+
+function createDeepCopyArrayOfMaps(initialArray) {
+    let returnArray = new Array(0);
+    for (const map of initialArray)
+        returnArray.push(createDeepCopyMap(map));
+    return returnArray;
 }
 
 function getRandomInt(min, max) {
+    //integer b/w [min,max)
     return Math.floor(Math.random() * (max - min) + min);
 }
 
@@ -1555,173 +1367,4 @@ function tournament_selection(left, right) {
         if (rndm2 <= n - rndm1 - 1)
             return rndm1 + left;
     }
-}
-
-async function greedyInititalTimeTableGenerator() {
-    periods = await Period.find();
-    groups = await Group.find();
-    const {
-        numberOfDays,
-        periodsPerDay
-    } = (await SystemParam.find())[0];
-
-    let periodsByLength = new Map();
-    for (let i = 1; i <= periodsPerDay; i++)
-        periodsByLength.set(i, new Array(0));
-    for (const period of periods) {
-        let arr = periodsByLength.get(Number(period.periodLength));
-        arr.push(period);
-        periodsByLength.set(Number(period.periodLength), [...arr]);
-    }
-    for (let i = 1; i <= periodsPerDay; i++) {
-        let arr = randomArray(periodsByLength.get(i));
-        periodsByLength.set(i, arr);
-    }
-
-    let initialTimeTable = new Map();
-    for (const group of groups) {
-        let matrix = new Array(numberOfDays);
-        for (let i = 0; i < numberOfDays; i++)
-            matrix[i] = new Array(periodsPerDay);
-        for (let i = 0; i < numberOfDays; i++)
-            for (let j = 0; j < periodsPerDay; j++)
-                matrix[i][j] = -1;
-        initialTimeTable.set(String(group._id), matrix);
-    }
-
-    for (let periodsperday = periodsPerDay; periodsperday > 0; periodsperday--) {
-        let periodsOfThisLength = periodsByLength.get(periodsperday);
-        if (periodsOfThisLength.length === 0)
-            continue;
-        let frePrdCombLen = new Map();
-        for (const [key, value] of initialTimeTable)
-            frePrdCombLen.set(key, new Set());
-
-        for (const [key, value] of frePrdCombLen) {
-            let frePrd = new Array(),
-                combOutput = new Array(periodsperday);
-            for (let i = 0; i < numberOfDays; i++)
-                for (let j = 0; j < periodsPerDay; j++)
-                    if (initialTimeTable.get(key)[i][j] === -1)
-                        frePrd.push(periodsPerDay * i + j);
-
-            async function combinationUtil(start, index) {
-                if (index == periodsperday) {
-                    frePrdCombLen.get(key).add([...combOutput]);
-                    //console.log(frePrdCombLen.get(key));
-                    //await io.read();
-                    return
-                }
-
-                for (let i = start; i + 1 <= frePrd.length &&
-                    frePrd.length - i >= periodsperday - index; i++) {
-                    combOutput[index] = frePrd[i];
-                    await combinationUtil(i + 1, index + 1);
-                }
-            }
-
-            await combinationUtil(0, 0);
-        }
-
-        for (const period of periodsOfThisLength)
-            for (let frqCnt = 0; frqCnt < period.periodFrequency; frqCnt++) {
-                let bestFitness = -Infinity,
-                    bestChoice;
-                //selecting which assortment of periods will be best
-                {
-                    let choice = new Array(period.groupsAttending.length);
-                    async function chosBestPrdAsrtmnt(level) {
-                        if (level === period.groupsAttending.length) {
-                            //console.log(choice);
-                            //await io.read();
-                            let fitness = 0;
-                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
-                                let priorityOne = true;
-                                for (let perLen = 0; perLen < period.periodLength - 1; perLen++)
-                                    priorityOne = priorityOne && choice[grpNum][perLen] === choice[grpNum][perLen + 1] - 1;
-                                priorityOne = priorityOne && choice[grpNum][0] <= periodsPerDay - period.periodLength;
-                                if (priorityOne)
-                                    fitness += 100000;
-                            }
-
-                            let priorityTwoHlpr = new Array(0),
-                                priorityTwo = true;
-                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
-                                priorityTwoHlpr.push(choice[grpNum][0]);
-                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
-                                priorityTwo = priorityTwo && priorityTwoHlpr[grpNum] === priorityTwoHlpr[0];
-                            if (priorityTwo)
-                                fitness += 10000;
-
-                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
-                                for (let perLen = 0; perLen < period.periodLength; perLen++) {
-                                    fitness += schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen)) ? -100 : 0;
-                                    //console.log(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen));
-                                    //console.log(schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period"+String(perLen)));
-                                    //await io.read();
-                                }
-
-                            for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++)
-                                for (let perLen = 0; perLen < period.periodLength; perLen++)
-                                    for (const [key1, value1] of initialTimeTable) {
-                                        let day = Math.floor(choice[grpNum][perLen] / periodsPerDay),
-                                            hour = choice[grpNum][perLen] % periodsPerDay;
-                                        fitness += schedulerGraph.has(value1[day][hour], String(period._id) + "Period" + String(perLen)) ? -99 : 0;
-                                        //console.log(choice[grpNum][perLen], String(period._id) + "Period" + String(perLen));
-                                        //console.log(schedulerGraph.has(choice[grpNum][perLen], String(period._id) + "Period"+String(perLen)));
-                                        //await io.read();
-                                    }
-
-                            if (fitness >= bestFitness) {
-                                bestFitness = fitness;
-                                bestChoice = [...choice];
-                            }
-                            return;
-                        }
-                        let grpChoiceSet = frePrdCombLen.get(String(period.groupsAttending[level]));
-                        for (const setItrt of grpChoiceSet) {
-                            choice[level] = setItrt;
-                            //console.log(setItrt);
-                            await chosBestPrdAsrtmnt(level + 1);
-                        }
-                    }
-                    await chosBestPrdAsrtmnt(0);
-                }
-                //putting the best choice into the time table
-                for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
-                    for (let perLen = 0; perLen < period.periodLength; perLen++) {
-                        let day = Math.floor(bestChoice[grpNum][perLen] / periodsPerDay),
-                            hour = bestChoice[grpNum][perLen] % periodsPerDay;
-                        initialTimeTable.get(String(period.groupsAttending[grpNum]))[day][hour] = String(period._id) + "Period" + String(perLen);
-                    }
-                    //console.log(initialTimeTable.get(String(period.groupsAttending[grpNum])));
-                    //await io.read();
-                }
-
-
-                console.log(bestChoice, bestFitness);
-                //await io.read();
-                // console.log(period);
-                // await io.read();
-                // console.log(initialTimeTable);
-                // await io.read();
-                //updating frePrdCombLen
-                for (let grpNum = 0; grpNum < period.groupsAttending.length; grpNum++) {
-                    for (let perLen = 0; perLen < period.periodLength; perLen++) {
-                        for (const setItrt of frePrdCombLen.get(String(period.groupsAttending[grpNum]))) {
-                            if (setItrt.includes(bestChoice[grpNum][perLen])) {
-                                1 + 1;
-                                frePrdCombLen.get(String(period.groupsAttending[grpNum])).delete(setItrt);
-                                //console.log(setItrt);
-                                //await io.read();
-                            }
-                        }
-                    }
-                }
-
-            }
-        console.log("Target Length::" + periodsperday);
-
-    }
-    return initialTimeTable;
 }

@@ -1138,9 +1138,9 @@ async function checkTimeTablePossible() {
 }
 
 async function GeneticAlgorithm() {
-    const populationSize = 200,
-        elitePopulation = 20,
-        mutationPopulation = 25;
+    const populationSize = 200;
+    const elitePopulation = Math.floor(populationSize / 10),
+        mutationPopulation = Math.floor(populationSize / 8);
     const {
         numberOfDays,
         periodsPerDay
@@ -1255,6 +1255,7 @@ async function GraphColorRandom(completeGraph) {
     return coloring;
 }
 async function RLFRandom(completeGraph) {
+    //broken, for some reason
     let coloring = new Map(),
         messageForColor = new Map();
     const {
@@ -1264,16 +1265,47 @@ async function RLFRandom(completeGraph) {
     for (let color = 0; color < numberOfDays * periodsPerDay; color++)
         messageForColor.set(color, new Set());
 
-    let unColored = new Set(await Period.find());
-    for (let color = 0; color < numberOfDays * periodsPerDay; color++) {
-        let neighborOfColord = new Set(),
-            potentialyColorable = new Set([...unColored]);
-        for (const message of messageForColor.get(color)) {
+    let unColored = new Set();
+    const periods = await Period.find();
+    for (const period of periods)
+        for (let freq = 0; freq < period.periodFrequency; freq++)
+            unColored.add(String(period._id) + "Period0Freq" + String(freq));
 
+    for (let color = 0; color < numberOfDays * periodsPerDay; color++) {
+        let potentialyColorable = new Array(0);
+        for (const uncolored of unColored)
+            if (!completeGraph.has(color, uncolored))
+                potentialyColorable.push(uncolored);
+        potentialyColorable = randomArray(potentialyColorable);
+        for (const message of messageForColor.get(color)) {
+            coloring.set(message, color);
+            for (const neighborNode in completeGraph.adj(message)) {
+                var index = potentialyColorable.indexOf(neighborNode);
+                if (index !== -1)
+                    potentialyColorable.splice(index, 1);
+            }
         }
-        while (potentialyColorable.size > 0);
+
+        while (potentialyColorable.length > 0) {
+            const node = potentialyColorable[0],
+                freq = getFreqFromNode(potentialyColorable[0]),
+                period = await Period.findById(potentialyColorable[0].slice(0, 24));
+            for (let len = 0; len < period.periodLength; len++) {
+                coloring.set(String(period._id) + "Period" + String(len) + "Freq" + String(freq), color);
+                if (len !== 0)
+                    messageForColor.get(color + len).add(String(period._id) + "Period" + String(len) + "Freq" + String(freq));
+                for (const neighborNode in completeGraph.adj(String(period._id) + "Period" + String(len) + "Freq" + String(freq))) {
+                    var index = potentialyColorable.indexOf(neighborNode);
+                    if (index !== -1)
+                        potentialyColorable.splice(index, 1);
+                }
+            }
+            unColored.delete(node);
+            potentialyColorable.splice(0, 1);
+        }
 
     }
+    return coloring;
 }
 
 function fitness(coloring, completeGraph, numberOfDays, periodsPerDay) {
@@ -1306,7 +1338,7 @@ async function mutateColoring(coloring, completeGraph, numberOfDays, periodsPerD
                 if (completeGraph.has(thisColor[i], thisColor[j]))
                     periodsInConflict.add(thisColor[i].slice(0, 24));
             if (completeGraph.has(hour, thisColor[i]))
-                periodsInConflict.add(thisColor[i].slice(0,24));
+                periodsInConflict.add(thisColor[i].slice(0, 24));
         }
     }
     let hlprarr = new Array([...periodsInConflict]);
@@ -1367,4 +1399,21 @@ function tournament_selection(left, right) {
         if (rndm2 <= n - rndm1 - 1)
             return rndm1 + left;
     }
+}
+
+function getFreqFromNode(node) {
+    let i = node.length - 1,
+        j = node.length,
+        freq = 0,
+        hlpr = 1;
+    while (node[i] !== 'q')
+        i--;
+    i++;
+    while (i < j) {
+        // console.log(node[i]);
+        freq = hlpr * freq + Number(node[i]);
+        i++;
+        hlpr *= 10;
+    }
+    return freq;
 }

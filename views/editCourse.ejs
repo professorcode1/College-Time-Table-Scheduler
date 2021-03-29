@@ -10,7 +10,7 @@
 </head>
 
 <body>
-    <form action=<%= "/updateCourse/" + String(course._id)%> method="post">
+    <form action=<%= "/editCourse/" + String(course._id)%> method="post">
         <h1> <%=course.courseName%> </h1> <br>
         The following professors teach the course. <br>
         <% for(const prof of profs){ if(course.taughtBy.includes(prof._id)){%>

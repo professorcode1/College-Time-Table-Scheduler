@@ -17,21 +17,18 @@
 
             <%for(const room of rooms){%>
             <div class="col-md-3">
-                <form action="/deleteRoom" method="post">
-                    <input type="text" value=<%=room._id%> name="roomId" style="display:none">
                     <h1><%=room.roomName%> : <%=room.roomCapacity%> </h1>  <br>
                     Periods in which during room is occupied. <br>
                     <%for(const busyPeriod of room.unAvialability){%>
                     <%="Day" + String(Math.floor(busyPeriod / periodsPerDay)+1) + "Period" + String((busyPeriod % periodsPerDay) + 1)%>
                     AND <%}%> <br>
-            <button type="submit">Delete this Room</button>
-        </form>
+            <a href="/deleteRoom/<%=room._id%>">Delete</a>
       </div>
       <%}%>
             </div>
         </div>
         <br><br>
-        <form action="/addRoom" method="post">
+        <form action="/room" method="post">
             Room Name
             <input type="text" name="roomName" required>
             Number of students room can accommodate.
@@ -47,7 +44,7 @@
             <button type="submit">Add this Room</button>
         </form>
         <br><br>
-        Done with Rooms. Then move onto the next <a href="/getCourse">step</a>.
+        Click <a href="/homepage">here</a> to goto homepage.
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous">

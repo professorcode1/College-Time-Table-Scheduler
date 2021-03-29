@@ -33,7 +33,7 @@
 
             <br> <br> <br>
 
-            <a href="/getCourse">Goto</a> course page.
+            <a href="/course">Goto</a> course page.
 
             <br> <br>
             <form action="/addPeriod" method="post">
@@ -63,7 +63,7 @@
           </select> <br> <br>
 
           <div>
-            Set the time at which this period must happen? <b>This feature only works if the period frequency is one.</b>
+            Set the time at which this period must happen? <b>This feature(selecting ban-time/set-time) only works if the period frequency is one.If both are provided set-time will be applied.</b>
             <input type="checkbox" name="specifyTime" value="true"> <br>
             Day Starting at 1 & ending at <%=numberOfDays%>: <input type="number" min="1" max=<%=numberOfDays%>
                     name="timeSpeicifiedDay"> <br>

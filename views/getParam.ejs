@@ -8,22 +8,19 @@
     integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
 </head>
 <body>
-    <%if(firstEntry){%>
-        <form action="/systemParams" method="post">
-            Enter the number of days college is open.
-            <input type="number" name="numberOfDays"> <br><br>
-            Enter the number of periods per day
-            <input type="number" name="periodsPerDay"><br><br>
-            <button type="submit">submit</button>
-        </form>
-        <%}else{%>
-            The paramates are already set as : <br>
+            The paramates are currently set as : <br>
             Number of days institute is open : <%=days%> <br>
             Number of periods per day : <%=periods%> <br>
-            Click <a href="/systemParams">here</a> to reset them.Keep in mind this will delete all periods and also reset all resources (profs,students,rooms) 
-            to be free all periods.
-            click <a href="/getProf">here</a> to move forward.
-            <%}%>
+
+            Fill the below form to reset them, keep in mind that when you reset these 2 parameters,all the ban-time of all resources ,as well as 
+            the set-time of all periods get erased.  
+            <form action="/parameter" method="post">
+                Days : <input type="number" required name="days" min="1"> <br>
+                Period : <input type="number" required name="periods" min="1"> <br>
+                <button type="submit">Submit</button>
+            </form>
+
+            click <a href="/homepage">here</a> to go back to homepage.
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
 

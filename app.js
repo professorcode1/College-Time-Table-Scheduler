@@ -13,6 +13,7 @@ const http = require("http");
 const socketio = require("socket.io")
 const server = http.createServer(app);
 const io = socketio(server);
+const GeneticAlgorithm = require('build/Release/GeneticAlgorithmJS.node')
 require('dotenv').config();
 const populationSize = 800;
 const elitePopulation = Math.floor(populationSize / 10),
@@ -854,13 +855,13 @@ app.get("/generateSchedule", (req, res) => {
     if (!req.isAuthenticated())
         return res.redirect("/login");
     res.sendFile(__dirname + "/webPages/waitingPage.html");
-    let schedulerGraph = new Graph.Graph();
-    io.on("connection", async (socket) => {
+    io.on("connection", (socket) => {
         console.log("New WS Connection...");
         const {
             numberOfDays,
             periodsPerDay
         } = req.user;
+        let schedulerGraph = new Graph.Graph();
         //Initialising Graph Below
         {
             const periods = req.user.periods;
@@ -974,26 +975,26 @@ app.get("/generateSchedule", (req, res) => {
                     for (let len1 = 0; len1 < len; len1++)
                         schedulerGraph.set(String(period._id) + "Period" + String(len), String(period._id) + "Period" + String(len1));
             }
+            let hlprGraph = schedulerGraph.copy();
+            schedulerGraph = new Graph.Graph();
+
+            for (let i = 0; i < numberOfDays * periodsPerDay; i++)
+                for (let j = 0; j < i; j++)
+                    schedulerGraph.set(i, j);
 
             for (const period of periods)
                 for (let freq = 0; freq < Number(period.periodFrequency); freq++)
                     for (let len = 0; len < Number(period.periodLength); len++) {
-
-                        socket.emit("message", {
-                            case: "message",
-                            message: "Creating edge b/w an instance of period " + period.periodName + " at length " + len + " and freq " + freq,
-                        });
-                        console.log("Creating edge b/w an instance of period " + period.periodName + " at length " + len + " and freq " + freq);
                         const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
 
                         for (let freq1 = 0; freq1 < freq; freq1++)
                             for (let len1 = 0; len1 < Number(period.periodLength); len1++)
                                 schedulerGraph.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
 
-                        for (const neighborNode in schedulerGraph.adj(String(period._id) + "Period" + String(len)))
+                        for (const neighborNode in hlprGraph.adj(String(period._id) + "Period" + String(len)))
                             if (String(neighborNode).length > 24) {
-                                let neighborPeriod = req.user.periods.find(periodItrt => String(periodItrt._id) == neighborNode.slice(0, 24));
-                                for (let freq1 = 0; freq1 < neighborPeriod.periodLength; freq1++)
+                                let neighborPeriod = periods.find(periodItrt => String(periodItrt._id) == neighborNode.slice(0, 24));
+                                for (let freq1 = 0; freq1 < Number(neighborPeriod.periodFrequency); freq1++)
                                     schedulerGraph.set(thisPeriodNode, neighborNode + "Freq" + String(freq1));
                             } else
                                 schedulerGraph.set(thisPeriodNode, neighborNode);
@@ -1029,6 +1030,36 @@ app.get("/generateSchedule", (req, res) => {
                     message: "Ammend the above periods for schedule generation."
                 });
         }
+        //Calling the genetic algorithm in c++
+        {
+            let nodesThenItsNeighbors = new Array();
+            for (const node of schedulerGraph._vertices) {
+                nodesThenItsNeighbors.push(String(node));
+                nodesThenItsNeighbors.push(schedulerGraph._graph[node]);
+            }
+            let PerLnGtOne =  new Object();
+            for (const period of req.user.periods)
+                if (Number(period.periodLength) > 1) {
+                    PerLnGtOne[String(period._id)] = 1;
+                    PerLnGtOne[String(period._id)+"Length"] = Number(period.periodLength);
+                    PerLnGtOne[String(period._id)+"Frequency"] = Number(period.periodFrequency);
+                }
+            const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay,schedulerGraph._vertices.length,...nodesThenItsNeighbors,PerLnGtOne);
+            while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
+                GeneticAlgorithmObject.geneticAlgorithmForGraphColoring();
+                socket.emit("message", {
+                    case: "message",
+                    message: "Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring()
+                });
+                console.log("Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring());
+            }
+            socket.emit("message", {
+                case: "message",
+                message: "Coloring is complete! Redirecting you to the table"
+            });
+            console.log(PerLnGtOne);
+        }
+    });
 });
 
 

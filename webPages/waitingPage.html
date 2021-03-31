@@ -1,26 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title></title>
 </head>
+
 <body>
-    This website is used to make the user wait while the time table is being generated.The user will get real-time updates on the progress of the table.
+    This website is used to make the user wait while the time table is being generated.The user will get real-time
+    updates on the progress of the table.
+    <ul id="list">
+
+    </ul>
 </body>
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js" integrity="sha384-DkkWv9oJFWLIydBXXjkBWnG1/fuVhw8YPBq37uvvD6WSYRFRqr21eY5Dg9ZhmWdy" crossorigin="anonymous"></script>
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"
+    integrity="sha384-DkkWv9oJFWLIydBXXjkBWnG1/fuVhw8YPBq37uvvD6WSYRFRqr21eY5Dg9ZhmWdy"
+    crossorigin="anonymous"></script>
 <script>
     const socket = io();
-    socket.on("message",message => {
+    socket.on("message", message => {
         switch (message.case) {
             case "message":
                 console.log(message.message);
+                function1(message.message)
                 break;
-        
+
             default:
                 break;
         }
     });
+    function function1(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(message));
+        ul.appendChild(li);
+    }
 </script>
+
 </html>

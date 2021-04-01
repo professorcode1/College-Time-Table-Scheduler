@@ -20,13 +20,14 @@
     crossorigin="anonymous"></script>
 <script>
     const socket = io();
+    //case can be message,warning,abort,complete
     socket.on("message", message => {
         switch (message.case) {
             case "message":
                 console.log(message.message);
                 function1(message.message)
                 break;
-
+            //case "complete": when we have a server,it should point to its user + viewSchedule
             default:
                 break;
         }

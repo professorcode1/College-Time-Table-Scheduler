@@ -56,6 +56,7 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
     
     Napi::Env env = info.Env();
     printf("Genetic algorithm engaged\n");
+    cout<<next_generation.size()<<endl;
     vector<map<int,set<string> > > previous_generation(this->next_generation);
     this->next_generation.clear();
         

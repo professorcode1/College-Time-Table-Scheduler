@@ -56,5 +56,3 @@ using namespace std;
 inline int sudorandom_number_generator(int left, int right);
 int tournament_selection(int left, int right);
 std::string StringFromInt(int num);
-
-

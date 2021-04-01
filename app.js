@@ -1044,7 +1044,16 @@ app.get("/generateSchedule", (req, res) => {
                     PerLnGtOne[String(period._id)+"Length"] = Number(period.periodLength);
                     PerLnGtOne[String(period._id)+"Frequency"] = Number(period.periodFrequency);
                 }
-            const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay,schedulerGraph._vertices.length,...nodesThenItsNeighbors,PerLnGtOne);
+            let periodsCppArgs = new Array();
+            for(const period of req.user.periods)
+            {
+                let obj = new Object();
+                obj["id"] = String(period._id);
+                obj["length"] = Number(period.periodLength);
+                obj["frequency"] = Number(period.periodFrequency);
+                periodsCppArgs.push(obj);
+            }
+            const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay,schedulerGraph._vertices.length,...nodesThenItsNeighbors,PerLnGtOne,req.user.periods.length,...periodsCppArgs);
             while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
                 GeneticAlgorithmObject.geneticAlgorithmForGraphColoring();
                 socket.emit("message", {
@@ -1053,11 +1062,7 @@ app.get("/generateSchedule", (req, res) => {
                 });
                 console.log("Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring());
             }
-            socket.emit("message", {
-                case: "message",
-                message: "Coloring is complete! Redirecting you to the table"
-            });
-            console.log(PerLnGtOne);
+            console.log("Done");
         }
     });
 });

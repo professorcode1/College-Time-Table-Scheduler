@@ -1,7 +1,12 @@
 #include "cpp.h"
 using namespace Napi;
 
-
+period::period(std::string id,int length,int frequency,std::vector<int> viableColors){
+    this->id = id;
+    this->length = length;
+    this->frequency = frequency;
+    this->viableColors = viableColors;
+}
 Cpp::Cpp(const Napi::CallbackInfo& info) : ObjectWrap(info) {
     Napi::Env env = info.Env();
     this->chromaticNumber = info[0].As<Napi::Number>().Int32Value();
@@ -25,31 +30,51 @@ Cpp::Cpp(const Napi::CallbackInfo& info) : ObjectWrap(info) {
             freq = temp.Get(node + "Frequency").As<Number>().Int32Value();
             PerLenGtOne.insert(pair<string,pair<int,int>>(node,pair<int,int>(len,freq)));
         }
-    
+    this->numberOfPeriods = info[3 + 2 * this->numberOfNodes].As<Napi::Number>().Int32Value();
+    cout<<"Starting periods construction"<<endl;
+    for(int itrt=0 ; itrt<this->numberOfPeriods ; itrt++)
+        {
+            string id = (info[4 + 2 * this->numberOfNodes + itrt].As<Napi::Object>()).Get("id").As<Napi::String>().Utf8Value();
+            int length = (info[4 + 2 * this->numberOfNodes + itrt].As<Napi::Object>()).Get("length").As<Napi::Number>().Int32Value();
+            int frequency = (info[4 + 2 * this->numberOfNodes + itrt].As<Napi::Object>()).Get("frequency").As<Napi::Number>().Int32Value();
+            vector<int> viableColors;
+            for(int color = 0 ; color < chromaticNumber ; color++)
+                if(CppNativeEdges.at(StringFromInt(color)).find(id + "Period0Freq0") == CppNativeEdges.at(StringFromInt(color)).end())
+                    viableColors.push_back(color);
+            this->periods.push_back(period(id,length,frequency,viableColors));
+        }
+        cout<<"periods constructed"<<endl;
     for (int i = 0; i < population_size; i++)
         this->next_generation.push_back(this->random_coloring());
-        
+    
+    cout<<"Calling merge sort"<<endl;
     merge_sort(next_generation, 0, next_generation.size() - 1);
-
+    cout<<"Construction complete"<<endl;
 }
 
 Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& info) {
     
     Napi::Env env = info.Env();
+    printf("Genetic algorithm engaged\n");
     vector<map<int,set<string> > > previous_generation(this->next_generation);
     this->next_generation.clear();
-    
+        
+        
     for (int i = 0; i < ceil(fraction_of_population_elite * population_size); i++)
         next_generation.push_back(previous_generation.at(i));
 
+    printf("CrossOver\n");
     while(next_generation.size() < population_size)
         next_generation.push_back(crossover(previous_generation.at(tournament_selection(0, population_size - 1)),previous_generation.at(tournament_selection(0, population_size - 1))));
     
+    printf("mutate\n");
     //mutating some of it
     for (int i = 0; i < ceil(fraction_of_population_mutated * population_size); i++)
         mutate(next_generation.at(sudorandom_number_generator(0, population_size - 1)));
 
+    printf("soritng\n");
     merge_sort(next_generation, 0, next_generation.size() - 1);
+    cout<<"Genetic algo complete"<<endl;
     return Napi::Number::New(env,1);
 
 }
@@ -85,21 +110,24 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 map<int,set<string> > Cpp::random_coloring()
 {
     map<int,set<string> > coloring;
-    for(int i=0 ; i<chromaticNumber ; i++)
-    coloring[i] = *(new set<string>());
-    for(const string node : this->CppNativeNodes)
-        coloring[sudorandom_number_generator(0,chromaticNumber-1)].insert(node);
+    for(int color=0 ; color < chromaticNumber ; color++)
+        coloring[color] = *(new set<string>());
+    for(const period Period : periods)
+        for(int freq=0 ; freq<Period.frequency ; freq++)
+        {
+            int color = Period.viableColors.at(sudorandom_number_generator(0,Period.viableColors.size()-1));
+            for(int len=0 ; len<Period.length ; len++)
+                coloring[color+len].insert(Period.id + "Period" + StringFromInt(len) + "Freq" + StringFromInt(freq));
+        }
     if(!checkColoringValid(coloring))
     {
-        cout<<"random coloring function is broke, it returned a non-valid coloring"<<endl;
+        cout<<"Random coloring Function is broken. Invalid coloring produces."<<endl;
         cin.get();
     }
+
     return coloring;
 }
-inline int sudorandom_number_generator(int left, int right)
-{
-    return static_cast<int>(g2() % (static_cast<long long>(right+1) - static_cast<long long>(left))) + left;
-}
+
 int Cpp::conflicts(const  map<int,set<string> > &coloring){
     int conflictCount{0};
     //This see's if the color the periods have chose is confliciting with it, this also takes care of the colors being nodes problem
@@ -116,248 +144,100 @@ int Cpp::conflicts(const  map<int,set<string> > &coloring){
                 if(CppNativeEdges[*nodes_colored_same_itrt].find(*nodes_colored_same_itrt_) != CppNativeEdges[*nodes_colored_same_itrt].end())
                     conflictCount++;
     //below code makes sure that period nodes which correcpond to different length of the same period are consequtive
-    for(const string node : CppNativeNodes)
-        if(node.length() > 24)
-            if(PerLenGtOne.find(node.substr(0,24)) != PerLenGtOne.end())
-            {
-                const int length = PerLenGtOne.at(node.substr(0,24)).first,
-                frequency = PerLenGtOne.at(node.substr(0,24)).second;
-                for(int freq=0 ; freq < frequency ; freq++)
-                {
-                    int arr[length];
-                    for(int len=0 ; len<length ; len++)
-                        arr[len] = positionInColoring(node.substr(0,24)+"Period"+StringFromInt(len)+"Freq"+StringFromInt(freq),coloring).first;
-                    for(int len=1 ; len<length ; len++)
-                        if(arr[len] != arr[len-1]+1)
-                            conflictCount++;
-                }
-            }
+    // for(const string node : CppNativeNodes)
+    //     if(node.length() > 24)
+    //         if(PerLenGtOne.find(node.substr(0,24)) != PerLenGtOne.end())
+    //         {
+    //             const int length = PerLenGtOne.at(node.substr(0,24)).first,
+    //             frequency = PerLenGtOne.at(node.substr(0,24)).second;
+    //             for(int freq=0 ; freq < frequency ; freq++)
+    //             {
+    //                 int arr[length];
+    //                 for(int len=0 ; len<length ; len++)
+    //                     arr[len] = positionInColoring(node.substr(0,24)+"Period"+StringFromInt(len)+"Freq"+StringFromInt(freq),coloring).first;
+    //                 for(int len=1 ; len<length ; len++)
+    //                     if(arr[len] != arr[len-1]+1)
+    //                         conflictCount++;
+    //             }
+    //         }
     
 
     return conflictCount;
 }
-pair<int,set<string>::iterator> Cpp::positionInColoring(const string &node,const map<int,set<string> > &coloring)
-{
-    for(int i=0 ; i<chromaticNumber ; i++)
-        for(set<string>::iterator nodesSameColor = coloring.at(i).begin() ; nodesSameColor != coloring.at(i).end() ; ++nodesSameColor)
-            if(*nodesSameColor == node)
-                return pair<int,set<string>::iterator>(i,nodesSameColor);
-    cout<<"Error::positionInColoring function had a call for a node that is not in coloring"<<endl<<node<<endl;
-    if(count(CppNativeNodes.begin(),CppNativeNodes.end(),node))
-        cout<<"The node does exist in CppNativeNodes,just not in this coloring"<<endl;
-    else
-        cout<<"It doesn't exist in CppNativeNodes"<<endl;
-    cout<<"Here are results of the checkvalidfunction:" << checkColoringValid(coloring)<<endl;
-    cin.get();
-    return pair<int,set<string>::iterator>(-1,coloring.at(0).end());
-} 
-int tournament_selection(int left, int right)
-{
-    //the propability of a number returning is an AP. The number left has 'a' probability, left + 1 has 'a-d',left +2 has probability 'a-2d' and so on.right have prob 1/(right-left+1)
-    //the mathematic formula for such a problem can be derived to what is shown below.
-    int n = right - left + 1;
-    while (true)
-    {
-        int rndm1 = sudorandom_number_generator(0, n - 1), rndm2 = sudorandom_number_generator(0, n - 1);
-        if (rndm2 <= n - rndm1 - 1)
-            return rndm1 + left;
-    }
-}
+
 map<int,set<string> > Cpp::crossover(const map<int,set<string> > &coloringOne,const map<int,set<string> > &coloringTwo)
 {
     map<int,set<string> > coloring;
-        for(int i=0 ; i<chromaticNumber ; i++)
-    coloring[i] = *(new set<string>());
-    map<string,int > ColoringOne,ColoringTwo;
-    for(int i=0 ; i<chromaticNumber ; i++)
-        for(set<string>::iterator nodesSameColor = coloringOne.at(i).begin() ; nodesSameColor != coloringOne.at(i).end() ; ++nodesSameColor)
-            ColoringOne.insert(pair<string,int>(*nodesSameColor,i));
-    for(int i=0 ; i<chromaticNumber ; i++)
-        for(set<string>::iterator nodesSameColor = coloringTwo.at(i).begin() ; nodesSameColor != coloringTwo.at(i).end() ; ++nodesSameColor)
-            ColoringTwo.insert(pair<string,int>(*nodesSameColor,i));
-
-    for(const string node : CppNativeNodes)
-        if(sudorandom_number_generator(0,999) < 500)
-            coloring[ColoringOne[node]].insert(node);
-        else
-            coloring[ColoringTwo[node]].insert(node);
+    for(int color = 0 ; color < chromaticNumber ; color++)
+        coloring[color]=*(new set<string>());
+    for(const period Period : periods)
+        for(int freq=0 ; freq<Period.frequency ; freq++)
+        {
+            int color;
+            if(sudorandom_number_generator(0,1000) < 500)
+                color = positionInColoring(Period.id + "Period0Freq"+StringFromInt(freq),coloringOne).first;
+            else
+                color = positionInColoring(Period.id + "Period0Freq"+StringFromInt(freq),coloringTwo).first;
+            for(int len=0 ; len<Period.length ; len++)
+                coloring[color+len].insert(Period.id + "Period" + StringFromInt(len) + "Freq" + StringFromInt(freq));
+        }
     if(!checkColoringValid(coloring))
     {
-        cout<<"Erro::crossover function is broke. It returned a non-valid coloring"<<endl;
+        cout<<"Crossover Function is broken. Invalid coloring produces."<<endl;
         cin.get();
     }
-    return coloring;
+        return coloring;
 }
 void Cpp::mutate(map<int,set<string> > &coloring)
 {
-    pair<bool,string> NodeInConflict =  conflictNode(coloring); //if NodeInConflict.first is true it means the conflic results from it not being a consequtive period
-    if(NodeInConflict.first && floor(probability_of_mutation_being_greedy*10000) < 10000)
+    while(true)
     {
-        int freqInverted = 0,freq=0,length = PerLenGtOne.at(NodeInConflict.second.substr(0,24)).first;
-        for(int i = NodeInConflict.second.length() - 1 ; i>0 ; i--)
-            if(NodeInConflict.second[i] == 'q')
-                break;
-            else
-                freqInverted += (NodeInConflict.second[i] - '0');
-        while(freqInverted)
+        const period PeriodOne = periods.at(sudorandom_number_generator(0,numberOfPeriods-1));
+        int freq = sudorandom_number_generator(0,PeriodOne.frequency-1),len = sudorandom_number_generator(0,PeriodOne.length-1);
+        const string nodeOne = PeriodOne.id+"Period"+StringFromInt(len)+"Freq" + StringFromInt(freq);
+        if(inConflict(coloring,nodeOne) || sudorandom_number_generator(0,10000)  < floor(10000 * probability_of_mutation))
         {
-            freq += freqInverted % 10;
-            freqInverted /= 10;
+            pair<int,set<string>::iterator> lenZeroColor = positionInColoring(PeriodOne.id+"Period0Freq" + StringFromInt(freq),coloring);
+            int newColor = sudorandom_number_generator(0,100) < 50 ? BestColor(PeriodOne,freq,coloring) : PeriodOne.viableColors.at(sudorandom_number_generator(0,PeriodOne.viableColors.size()-1));
+            for(int lenVar = 0; lenVar < PeriodOne.length ; lenVar++)
+                coloring.at(lenZeroColor.first + lenVar).erase(PeriodOne.id+"Period"+StringFromInt(lenVar)+"Freq" + StringFromInt(freq));
+            for(int lenVar = 0; lenVar < PeriodOne.length ; lenVar++)
+                coloring.at(newColor + lenVar).insert(PeriodOne.id+"Period"+StringFromInt(lenVar)+"Freq" + StringFromInt(freq));
+            
+            return ;
         }
-        string Node = NodeInConflict.second.substr(0,24) + "Period0" + "Freq" + StringFromInt(freq);
-        vector <int> viableColors;
-        for(int i=0 ; i<chromaticNumber ; i++)
-            if(CppNativeEdges[to_string(i)].find(Node) == CppNativeEdges[to_string(i)].end())
-                viableColors.push_back(i);
-        int colorOfChoice = viableColors.at(sudorandom_number_generator(0,viableColors.size()-1));
-        for(int len=0 ; len<length ; len++)
+    }
+}
+int Cpp::BestColor(const period &Period,int freq,const map<int,set<string> > &coloring)
+{
+    int bestColor = Period.viableColors.at(sudorandom_number_generator(0,Period.viableColors.size()-1)) , leastConflict = INT_MAX;
+    for(int color : Period.viableColors)
+    {
+        int conflictThisColor = 0;
+        for(int len=0 ; len<Period.length ; len++)
         {
-            string node = NodeInConflict.second.substr(0,24) + "Period" + StringFromInt(len) + "Freq" + StringFromInt(freq);
-            pair<int,set<string>::iterator> current = positionInColoring(node,coloring);
-            coloring[current.first].erase(current.second);
-            coloring[colorOfChoice].insert(node);
+            string node = Period.id+"Period"+StringFromInt(len) +"Freq"+StringFromInt(freq);
+            pair<int,set<string>::iterator> position = positionInColoring(node,coloring);
+            if(CppNativeEdges.at(node).find(StringFromInt(position.first)) != CppNativeEdges.at(node).end())
+                conflictThisColor++;
+            for(set<string>::iterator sameColorItrt = coloring.at(position.first).begin() ; sameColorItrt != coloring.at(position.first).end() ; sameColorItrt++)
+                if(CppNativeEdges.at(*position.second).find(*sameColorItrt) != CppNativeEdges.at(*position.second).end())
+                    conflictThisColor++;
         }
-        return ;
+        if(conflictThisColor < leastConflict)
+            bestColor = color;
     }
-    string node;
-    if( sudorandom_number_generator(0,10000) < floor(10000*probability_of_mutation_being_greedy))
-        node =NodeInConflict.second;
-    else
-        node = CppNativeNodes.at(sudorandom_number_generator(0,numberOfNodes-1));
-    pair<int,set<string>::iterator> current = positionInColoring(node,coloring);
-    int newColor = sudorandom_number_generator(0,chromaticNumber-1);
-    coloring[current.first].erase(current.second);
-    coloring[newColor].insert(node);
-    
-    if(!checkColoringValid(coloring))
-    {
-        cout<<"mutate function is broke, it returned a non-valid coloring"<<endl;
-        cin.get();
-    }
+    return bestColor;
 }
-pair<bool,string> Cpp::conflictNode(const map<int,set<string> > &coloring)
+bool Cpp::inConflict(const map<int,set<string> > &coloring,const string &node)
 {
-    // int methodOrientation = sudorandom_number_generator(0,5999);
-    // if(methodOrientation < 1000)
-    // {
-    //     pair<bool,string> subValue = conflictNodeSubFunctionOne(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     subValue = conflictNodeSubFunctionTwo(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     return conflictNodeSubFunctionThree(coloring);
-    // }
-    // else if(methodOrientation < 2000)
-    // {
-    //     pair<bool,string> subValue = conflictNodeSubFunctionTwo(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     subValue = conflictNodeSubFunctionOne(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     return conflictNodeSubFunctionThree(coloring);
-    // }
-    // else if(methodOrientation < 1000)
-    // {
-    //     pair<bool,string> subValue = conflictNodeSubFunctionTwo(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     subValue = conflictNodeSubFunctionThree(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     return conflictNodeSubFunctionOne(coloring);
-    // }
-    // else if(methodOrientation < 1000)
-    // {
-    //     pair<bool,string> subValue = conflictNodeSubFunctionThree(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     subValue = conflictNodeSubFunctionTwo(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     return conflictNodeSubFunctionOne(coloring);
-    // }
-    // else if(methodOrientation < 1000)
-    // {
-    //     pair<bool,string> subValue = conflictNodeSubFunctionOne(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     subValue = conflictNodeSubFunctionThree(coloring);
-    //         if(subValue.second != "-1")
-    //             return subValue;
-    //     return conflictNodeSubFunctionTwo(coloring);
-    // }
-    // else
-    // {
-        pair<bool,string> subValue = conflictNodeSubFunctionThree(coloring);
-            if(subValue.second != "-1")
-                return subValue;
-        subValue = conflictNodeSubFunctionOne(coloring);
-            if(subValue.second != "-1")
-                return subValue;
-        return conflictNodeSubFunctionTwo(coloring);
-    //} 
-}
-pair<bool,string> Cpp::conflictNodeSubFunctionOne(const map<int,set<string> > &coloring)
-{
-    int chromaticNumbersArray[chromaticNumber];
-    for(int i=0 ; i<chromaticNumber ; i++)
-        chromaticNumbersArray[i] = i;
-    for(int i=0 ; i<chromaticNumber ; i++)
-        swap(chromaticNumbersArray[i],chromaticNumbersArray[sudorandom_number_generator(i,chromaticNumber-1)]);
-    for(int color = 0 ; color < chromaticNumber ; color++)
-        for(set<string>::iterator nodes_colored_same_itrt = coloring.at(chromaticNumbersArray[color]).begin() ; nodes_colored_same_itrt != coloring.at(chromaticNumbersArray[color]).end() ; ++nodes_colored_same_itrt)
-            if(CppNativeEdges[to_string(chromaticNumbersArray[color])].find(*nodes_colored_same_itrt) != CppNativeEdges[to_string(chromaticNumbersArray[color])].end())
-                return pair<bool,string>(false,*nodes_colored_same_itrt);
-    return pair<bool,string>(false,"-1");
- 
-}
-pair<bool,string> Cpp::conflictNodeSubFunctionTwo(const map<int,set<string> > &coloring)
-{
-    int chromaticNumbersArray[chromaticNumber];
-    for(int i=0 ; i<chromaticNumber ; i++)
-        chromaticNumbersArray[i] = i;
-    for(int i=0 ; i<chromaticNumber ; i++)
-        swap(chromaticNumbersArray[i],chromaticNumbersArray[sudorandom_number_generator(i,chromaticNumber-1)]);
-    //for each color seeing if two periods have an edge i.e. share resourses and hance cannot be colored this color
-    for(int color = 0 ; color < chromaticNumber ; color++)
-        for(set<string>::iterator nodes_colored_same_itrt = coloring.at(chromaticNumbersArray[color]).begin() ; nodes_colored_same_itrt != coloring.at(chromaticNumbersArray[color]).end() ; ++nodes_colored_same_itrt)
-            for(set<string>::iterator nodes_colored_same_itrt_ = coloring.at(chromaticNumbersArray[color]).begin() ; nodes_colored_same_itrt_ != nodes_colored_same_itrt ; ++nodes_colored_same_itrt_)
-                if(CppNativeEdges[*nodes_colored_same_itrt].find(*nodes_colored_same_itrt_) != CppNativeEdges[*nodes_colored_same_itrt].end())
-                    return pair<bool,string>(false,*nodes_colored_same_itrt);
-    return pair<bool,string>(false,"-1");
-}
-pair<bool,string> Cpp::conflictNodeSubFunctionThree(const map<int,set<string> > &coloring)
-{
-    //below code makes sure that period nodes which correcpond to different length of the same period are consequtive
-    int numberOfNodesArray[numberOfNodes];
-    for(int i=0 ; i<numberOfNodes ; i++)
-        numberOfNodesArray[i] = i;
-    for(int i=0 ; i<numberOfNodes ; i++)
-        swap(numberOfNodesArray[i],numberOfNodesArray[sudorandom_number_generator(i,numberOfNodes-1)]);
-    for(int i=0 ; i<numberOfNodes ; i++)
-    {
-        string node = CppNativeNodes[numberOfNodesArray[i]];    
-        if(node.length() > 24)
-            if(PerLenGtOne.find(node.substr(0,24)) != PerLenGtOne.end())
-            {
-                const int length = PerLenGtOne.at(node.substr(0,24)).first,
-                frequency = PerLenGtOne.at(node.substr(0,24)).second;
-                for(int freq=0 ; freq < frequency ; freq++)
-                {
-                    int arr[length];
-                    for(int len=0 ; len<length ; len++)
-                        arr[len] = positionInColoring(node.substr(0,24)+"Period"+StringFromInt(len)+"Freq"+StringFromInt(freq),coloring).first;
-                    for(int len=1 ; len<length ; len++)
-                        if(arr[len] != arr[len-1]+1)
-                            return pair<bool,string>(true,node.substr(0,24)+"Period"+StringFromInt(len)+"Freq"+StringFromInt(freq));
-                }
-            }
-    
-    }
-    return pair<bool,string>(false,"-1");
-
+    pair<int,set<string>::iterator> position = positionInColoring(node,coloring);
+    if(CppNativeEdges.at(node).find(StringFromInt(position.first)) != CppNativeEdges.at(node).end())
+        return true;
+    for(set<string>::iterator sameColorItrt = coloring.at(position.first).begin() ; sameColorItrt != coloring.at(position.first).end() ; sameColorItrt++)
+        if(CppNativeEdges.at(*position.second).find(*sameColorItrt) != CppNativeEdges.at(*position.second).end())
+            return true;
+    return false;
 }
 void Cpp::merge(vector<map<int,set<string> >> &arr, int p, int q, int r)
 {
@@ -402,7 +282,6 @@ string StringFromInt(int num)
         num /= 10;
     }
     reverse(str.begin(), str.end());
-    cout<<str<<endl;
     return str;
 }
 bool Cpp::checkColoringValid(const map<int,set<string> > &coloring)
@@ -410,6 +289,8 @@ bool Cpp::checkColoringValid(const map<int,set<string> > &coloring)
     //every node in CppNatvesNodes must be somewhere in this coloring, if it isn't that means the coloring is wrong.
     for(const string node : this->CppNativeNodes)
     {
+        if(node.length() < 24)
+            continue;
         bool DoesNotExist = true;
         for(map<int,set<string> >::const_iterator colorItrt = coloring.begin() ; colorItrt != coloring.end() ; colorItrt++)
             if(DoesNotExist)
@@ -419,8 +300,60 @@ bool Cpp::checkColoringValid(const map<int,set<string> > &coloring)
                         break;
                         }
         if(DoesNotExist)
+        {
+            cout<<"The table supplied doesn't have a period from the list of all nodes"<<endl;
             return false;
+        }
     }
+    for(const string node : CppNativeNodes)
+        if(node.length() > 24)
+            if(PerLenGtOne.find(node.substr(0,24)) != PerLenGtOne.end()) //implies that the period has length greater than one 
+            {
+                const int length = PerLenGtOne.at(node.substr(0,24)).first,
+                frequency = PerLenGtOne.at(node.substr(0,24)).second;
+                for(int freq=0 ; freq < frequency ; freq++)
+                {
+                    int arr[length];
+                    for(int len=0 ; len<length ; len++)
+                        arr[len] = positionInColoring(node.substr(0,24)+"Period"+StringFromInt(len)+"Freq"+StringFromInt(freq),coloring).first;
+                    for(int len=1 ; len<length ; len++)
+                        if(arr[len] != arr[len-1]+1)
+                            {
+                                cout<<"The nodes with different len are not together"<<endl;
+                                return false;}
+                }
+            }
     return true;
+}
+inline int sudorandom_number_generator(int left, int right)
+{
+    return static_cast<int>(g2() % (static_cast<long long>(right+1) - static_cast<long long>(left))) + left;
+}
+pair<int,set<string>::iterator> Cpp::positionInColoring(const string &node,const map<int,set<string> > &coloring)
+{
+    for(int i=0 ; i<chromaticNumber ; i++)
+        for(set<string>::iterator nodesSameColor = coloring.at(i).begin() ; nodesSameColor != coloring.at(i).end() ; ++nodesSameColor)
+            if(*nodesSameColor == node)
+                return pair<int,set<string>::iterator>(i,nodesSameColor);
+    cout<<"Error::positionInColoring function had a call for a node that is not in coloring"<<endl<<node<<endl;
+    if(count(CppNativeNodes.begin(),CppNativeNodes.end(),node))
+        cout<<"The node does exist in CppNativeNodes,just not in this coloring"<<endl;
+    else
+        cout<<"It doesn't exist in CppNativeNodes"<<endl;
+    cout<<"Here are results of the checkvalidfunction:" << checkColoringValid(coloring)<<endl;
+    cin.get();
+    return pair<int,set<string>::iterator>(-1,coloring.at(0).end());
+} 
+int tournament_selection(int left, int right)
+{
+    //the propability of a number returning is an AP. The number left has 'a' probability, left + 1 has 'a-d',left +2 has probability 'a-2d' and so on.right have prob 1/(right-left+1)
+    //the mathematic formula for such a problem can be derived to what is shown below.
+    int n = right - left + 1;
+    while (true)
+    {
+        int rndm1 = sudorandom_number_generator(0, n - 1), rndm2 = sudorandom_number_generator(0, n - 1);
+        if (rndm2 <= n - rndm1 - 1)
+            return rndm1 + left;
+    }
 }
 NODE_API_MODULE(addon, Init)

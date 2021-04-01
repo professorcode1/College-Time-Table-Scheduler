@@ -13,13 +13,14 @@ const http = require("http");
 const socketio = require("socket.io")
 const server = http.createServer(app);
 const io = socketio(server);
-const GeneticAlgorithm = require('build/Release/GeneticAlgorithmJS.node')
+const GeneticAlgorithm = require('build/Release/GeneticAlgorithmJS.node');
+const util = require('util');
 require('dotenv').config();
 const populationSize = 800;
 const elitePopulation = Math.floor(populationSize / 10),
     mutationPopulation = Math.floor(populationSize / 8);
 
-
+app.set('socketio', io);
 app.set("view engine", "ejs");
 
 app.use(bodyParser.urlencoded({
@@ -136,6 +137,7 @@ const User = new mongoose.model("user", userSchema);
 passport.use(User.createStrategy());
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
+
 
 app.get("/", (req, res) => res.sendFile(__dirname + "/webPages/index.html"));
 app.get("/loginFailed", (req, res) => res.render("message", {
@@ -851,220 +853,222 @@ app.post("/parameter", async (req, res) => {
     });
 }
 //time table
-app.get("/generateSchedule", (req, res) => {
+app.get("/generateSchedule", async (req, res) => {
     if (!req.isAuthenticated())
         return res.redirect("/login");
     res.sendFile(__dirname + "/webPages/waitingPage.html");
-    io.on("connection", (socket) => {
-        console.log("New WS Connection...");
-        const {
-            numberOfDays,
-            periodsPerDay
-        } = req.user;
-        let schedulerGraph = new Graph.Graph();
-        //Initialising Graph Below
-        {
-            const periods = req.user.periods;
-            const groups = req.user.groups;
-            const rooms = req.user.rooms;
-            const profs = req.user.professors;
-            socket.emit("message", {
-                case: "message",
-                message: "Initialising graph"
-            });
-            console.log("Initialising graph");
-            if (req.user.numberOfDays == 0 && req.user.periodsPerDay == 0)
-                return console.log("Completed Initialising Graph");
-            for (let lpitrt = 1; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+    var io = req.app.get('socketio');
+    const {
+        numberOfDays,
+        periodsPerDay
+    } = req.user;
+    let schedulerGraph = new Graph.Graph();
+    //Initialising Graph Below
+    {
+        const periods = req.user.periods;
+        const groups = req.user.groups;
+        const rooms = req.user.rooms;
+        const profs = req.user.professors;
+        await io.message("message");
+        io.emit("message", {
+            case: "message",
+            message: "Initialising graph"
+        });
+        console.log("Initialising graph");
+        if (req.user.numberOfDays == 0 && req.user.periodsPerDay == 0)
+            return console.log("Completed Initialising Graph");
+        for (let lpitrt = 1; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+            for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                schedulerGraph.set(lpitrt, lpitrt1);
+
+        for (const room of rooms) {
+
+            for (let lpitrt = 0; lpitrt < room.periodsUsedIn.length; lpitrt++) {
                 for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                    schedulerGraph.set(lpitrt, lpitrt1);
-
-            for (const room of rooms) {
-
-                for (let lpitrt = 0; lpitrt < room.periodsUsedIn.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(room.periodsUsedIn[lpitrt]) + "Period0", String(room.periodsUsedIn[lpitrt1]) + "Period0");
+                    schedulerGraph.set(String(room.periodsUsedIn[lpitrt]) + "Period0", String(room.periodsUsedIn[lpitrt1]) + "Period0");
 
 
-                    for (const roomUnavailabiliy of room.unAvialability)
-                        schedulerGraph.set(roomUnavailabiliy, String(room.periodsUsedIn[lpitrt]) + "Period0");
-                }
+                for (const roomUnavailabiliy of room.unAvialability)
+                    schedulerGraph.set(roomUnavailabiliy, String(room.periodsUsedIn[lpitrt]) + "Period0");
             }
-            socket.emit("message", {
-                case: "message",
-                message: "Initialise::Rooms done"
-            });
-            console.log("Initialise::Rooms done");
+        }
+        io.emit("message", {
+            case: "message",
+            message: "Initialise::Rooms Complete"
+        });
+        console.log("Initialise::Rooms Complete");
 
-            for (const prof of profs) {
-                for (let lpitrt = 0; lpitrt < prof.periodsTaken.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(prof.periodsTaken[lpitrt]) + "Period0", String(prof.periodsTaken[lpitrt1]) + "Period0");
+        for (const prof of profs) {
+            for (let lpitrt = 0; lpitrt < prof.periodsTaken.length; lpitrt++) {
+                for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                    schedulerGraph.set(String(prof.periodsTaken[lpitrt]) + "Period0", String(prof.periodsTaken[lpitrt1]) + "Period0");
 
 
-                    for (const profUnavailabiliy of prof.unAvialability)
-                        schedulerGraph.set(profUnavailabiliy, String(prof.periodsTaken[lpitrt]) + "Period0");
-                }
+                for (const profUnavailabiliy of prof.unAvialability)
+                    schedulerGraph.set(profUnavailabiliy, String(prof.periodsTaken[lpitrt]) + "Period0");
             }
-            socket.emit("message", {
-                case: "message",
-                message: "Initialise::Professors done"
-            });
-            console.log("Initialise::Prof Done");
+        }
+        io.emit("message", {
+            case: "message",
+            message: "Initialise::Professors Complete"
+        });
+        console.log("Initialise::Prof Done");
 
-            for (const group of groups) {
-                for (let lpitrt = 0; lpitrt < group.periodsAttended.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(group.periodsAttended[lpitrt]) + "Period0", String(group.periodsAttended[lpitrt1]) + "Period0");
+        for (const group of groups) {
+            for (let lpitrt = 0; lpitrt < group.periodsAttended.length; lpitrt++) {
+                for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
+                    schedulerGraph.set(String(group.periodsAttended[lpitrt]) + "Period0", String(group.periodsAttended[lpitrt1]) + "Period0");
 
 
-                    for (const groupUnavailabiliy of group.unAvialability)
-                        schedulerGraph.set(groupUnavailabiliy, String(group.periodsAttended[lpitrt]) + "Period0");
-                }
+                for (const groupUnavailabiliy of group.unAvialability)
+                    schedulerGraph.set(groupUnavailabiliy, String(group.periodsAttended[lpitrt]) + "Period0");
             }
-            socket.emit("message", {
+        }
+        io.emit("message", {
+            case: "message",
+            message: "Initialise::Groups Complete"
+        });
+
+        console.log("Initialise::Group Done");
+
+        for (const period of periods) {
+            console.log("Initialise::" + period.periodName);
+            io.emit("message", {
                 case: "message",
-                message: "Initialise::Groups done"
+                message: "Initialising::Period " + period.periodName
             });
-            console.log("Initialise::Group Done");
 
-            for (const period of periods) {
-                console.log("Initialise::" + period.periodName);
-                socket.emit("message", {
-                    case: "message",
-                    message: "Initialising::Period " + period.periodName
-                });
-                for (let len = 1; len < Number(period.periodLength); len++) {
+            for (let len = 1; len < Number(period.periodLength); len++) {
 
-                    const thisPeriodNode = String(period._id) + "Period" + String(len);
+                const thisPeriodNode = String(period._id) + "Period" + String(len);
 
-                    for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
-                        schedulerGraph.set(node, thisPeriodNode);
+                for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
+                    schedulerGraph.set(node, thisPeriodNode);
 
-                    for (let itrt = Number(period.periodLength) - 1 - len; itrt > 0; itrt--)
-                        for (let day = 0; day < numberOfDays; day++)
-                            schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
-
-                    for (let itrt = 0; itrt < len; itrt++)
-                        for (let day = 0; day < numberOfDays; day++)
-                            schedulerGraph.set(day * periodsPerDay + itrt, thisPeriodNode);
-                }
-
-                if (period.periodFrequency == 1) {
-
-                    if (period.periodTime != -1) {
-
-                        for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
-                            if (lpitrt != period.periodTime)
-                                schedulerGraph.set(lpitrt, String(period._id) + "Period0");
-                    } else if (period.periodAntiTime.length != 0) {
-
-                        for (const antiTime of period.periodAntiTime)
-                            for (let perLen = 0; perLen < period.periodLength; perLen++)
-                                if (Number(antiTime) + perLen < numberOfDays * periodsPerDay)
-                                    schedulerGraph.set(Number(antiTime) + perLen, String(period._id) + "Period" + String(perLen));
-                    }
-                }
-
-
-                for (let itrt = Number(period.periodLength) - 1; itrt > 0; itrt--)
+                for (let itrt = Number(period.periodLength) - 1 - len; itrt > 0; itrt--)
                     for (let day = 0; day < numberOfDays; day++)
-                        schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
+                        schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
 
-                for (let len = 1; len < Number(period.periodLength); len++)
-                    for (let len1 = 0; len1 < len; len1++)
-                        schedulerGraph.set(String(period._id) + "Period" + String(len), String(period._id) + "Period" + String(len1));
+                for (let itrt = 0; itrt < len; itrt++)
+                    for (let day = 0; day < numberOfDays; day++)
+                        schedulerGraph.set(day * periodsPerDay + itrt, thisPeriodNode);
             }
-            let hlprGraph = schedulerGraph.copy();
-            schedulerGraph = new Graph.Graph();
 
-            for (let i = 0; i < numberOfDays * periodsPerDay; i++)
-                for (let j = 0; j < i; j++)
-                    schedulerGraph.set(i, j);
+            if (period.periodFrequency == 1) {
 
-            for (const period of periods)
-                for (let freq = 0; freq < Number(period.periodFrequency); freq++)
-                    for (let len = 0; len < Number(period.periodLength); len++) {
-                        const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
+                if (period.periodTime != -1) {
 
-                        for (let freq1 = 0; freq1 < freq; freq1++)
-                            for (let len1 = 0; len1 < Number(period.periodLength); len1++)
-                                schedulerGraph.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
+                    for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
+                        if (lpitrt != period.periodTime)
+                            schedulerGraph.set(lpitrt, String(period._id) + "Period0");
+                } else if (period.periodAntiTime.length != 0) {
 
-                        for (const neighborNode in hlprGraph.adj(String(period._id) + "Period" + String(len)))
-                            if (String(neighborNode).length > 24) {
-                                let neighborPeriod = periods.find(periodItrt => String(periodItrt._id) == neighborNode.slice(0, 24));
-                                for (let freq1 = 0; freq1 < Number(neighborPeriod.periodFrequency); freq1++)
-                                    schedulerGraph.set(thisPeriodNode, neighborNode + "Freq" + String(freq1));
-                            } else
-                                schedulerGraph.set(thisPeriodNode, neighborNode);
+                    for (const antiTime of period.periodAntiTime)
+                        for (let perLen = 0; perLen < period.periodLength; perLen++)
+                            if (Number(antiTime) + perLen < numberOfDays * periodsPerDay)
+                                schedulerGraph.set(Number(antiTime) + perLen, String(period._id) + "Period" + String(perLen));
+                }
+            }
 
-                    }
 
-            socket.emit("message", {
-                case: "message",
-                message: "Initialisation Complete"
+            for (let itrt = Number(period.periodLength) - 1; itrt > 0; itrt--)
+                for (let day = 0; day < numberOfDays; day++)
+                    schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
+
+            for (let len = 1; len < Number(period.periodLength); len++)
+                for (let len1 = 0; len1 < len; len1++)
+                    schedulerGraph.set(String(period._id) + "Period" + String(len), String(period._id) + "Period" + String(len1));
+        }
+        let hlprGraph = schedulerGraph.copy();
+        schedulerGraph = new Graph.Graph();
+
+        for (let i = 0; i < numberOfDays * periodsPerDay; i++)
+            for (let j = 0; j < i; j++)
+                schedulerGraph.set(i, j);
+
+        for (const period of periods)
+            for (let freq = 0; freq < Number(period.periodFrequency); freq++)
+                for (let len = 0; len < Number(period.periodLength); len++) {
+                    const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
+
+                    for (let freq1 = 0; freq1 < freq; freq1++)
+                        for (let len1 = 0; len1 < Number(period.periodLength); len1++)
+                            schedulerGraph.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
+
+                    for (const neighborNode in hlprGraph.adj(String(period._id) + "Period" + String(len)))
+                        if (String(neighborNode).length > 24) {
+                            let neighborPeriod = periods.find(periodItrt => String(periodItrt._id) == neighborNode.slice(0, 24));
+                            for (let freq1 = 0; freq1 < Number(neighborPeriod.periodFrequency); freq1++)
+                                schedulerGraph.set(thisPeriodNode, neighborNode + "Freq" + String(freq1));
+                        } else
+                            schedulerGraph.set(thisPeriodNode, neighborNode);
+
+                }
+
+        io.emit("message", {
+            case: "message",
+            message: "Initialisation Complete"
+        });
+
+        console.log("Initialisation Complete");
+
+        //Checking if time table is possible
+        let abort = false;
+        for (const node in schedulerGraph._graph) {
+            let inConflict = true;
+            for (let periodNumber = 0; periodNumber < numberOfDays * periodsPerDay; periodNumber++)
+                inConflict = inConflict && schedulerGraph.has(node, periodNumber);
+            if (inConflict) {
+                abort = true;
+                const nodeString = String(node);
+                const period = req.user.periods.find(period => String(period._id) == nodeString.slice(0, 24));
+                console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
+                io.emit("message", {
+                    case: "warning",
+                    message: "WARNING:The period " + period.periodName + " causing impossible time table config."
+                });
+
+            }
+        }
+        if (abort)
+            return io.emit("message", {
+                case: "abort",
+                message: "Abort::Aborting Generatin::Ammend the above periods for schedule generation."
             });
-            console.log("Initialisation Complete");
-
-            //Checking if time table is possible
-            let abort = false;
-            for (const node in schedulerGraph._graph) {
-                let inConflict = true;
-                for (let periodNumber = 0; periodNumber < numberOfDays * periodsPerDay; periodNumber++)
-                    inConflict = inConflict && schedulerGraph.has(node, periodNumber);
-                if (inConflict) {
-                    abort = true;
-                    const nodeString = String(node);
-                    const period = req.user.periods.find(period => String(period._id) == nodeString.slice(0, 24));
-                    console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
-                    socket.emit("message", {
-                        case: "warning",
-                        message: "WARNING:The period " + period.periodName + " causing impossible time table config."
-                    });
-                }
-            }
-            if (abort)
-                return socket.emit("message", {
-                    case: "abort",
-                    message: "Ammend the above periods for schedule generation."
-                });
+    }
+    //Calling the genetic algorithm in c++
+    {
+        let nodesThenItsNeighbors = new Array();
+        for (const node of schedulerGraph._vertices) {
+            nodesThenItsNeighbors.push(String(node));
+            nodesThenItsNeighbors.push(schedulerGraph._graph[node]);
         }
-        //Calling the genetic algorithm in c++
-        {
-            let nodesThenItsNeighbors = new Array();
-            for (const node of schedulerGraph._vertices) {
-                nodesThenItsNeighbors.push(String(node));
-                nodesThenItsNeighbors.push(schedulerGraph._graph[node]);
+        let PerLnGtOne = new Object();
+        for (const period of req.user.periods)
+            if (Number(period.periodLength) > 1) {
+                PerLnGtOne[String(period._id)] = 1;
+                PerLnGtOne[String(period._id) + "Length"] = Number(period.periodLength);
+                PerLnGtOne[String(period._id) + "Frequency"] = Number(period.periodFrequency);
             }
-            let PerLnGtOne =  new Object();
-            for (const period of req.user.periods)
-                if (Number(period.periodLength) > 1) {
-                    PerLnGtOne[String(period._id)] = 1;
-                    PerLnGtOne[String(period._id)+"Length"] = Number(period.periodLength);
-                    PerLnGtOne[String(period._id)+"Frequency"] = Number(period.periodFrequency);
-                }
-            let periodsCppArgs = new Array();
-            for(const period of req.user.periods)
-            {
-                let obj = new Object();
-                obj["id"] = String(period._id);
-                obj["length"] = Number(period.periodLength);
-                obj["frequency"] = Number(period.periodFrequency);
-                periodsCppArgs.push(obj);
-            }
-            const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay,schedulerGraph._vertices.length,...nodesThenItsNeighbors,PerLnGtOne,req.user.periods.length,...periodsCppArgs);
-            while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
-                GeneticAlgorithmObject.geneticAlgorithmForGraphColoring();
-                socket.emit("message", {
-                    case: "message",
-                    message: "Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring()
-                });
-                console.log("Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring());
-            }
-            console.log("Done");
+        let periodsCppArgs = new Array();
+        for (const period of req.user.periods) {
+            let obj = new Object();
+            obj["id"] = String(period._id);
+            obj["length"] = Number(period.periodLength);
+            obj["frequency"] = Number(period.periodFrequency);
+            periodsCppArgs.push(obj);
         }
-    });
+        const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay, schedulerGraph._vertices.length, ...nodesThenItsNeighbors, PerLnGtOne, req.user.periods.length, ...periodsCppArgs);
+        while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
+            GeneticAlgorithmObject.geneticAlgorithmForGraphColoring();
+            io.emit("message", {
+                case: "message",
+                message: "Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring()
+            });
+            console.log("Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring());
+        }
+        console.log("Done");
+    }
 });
 
 

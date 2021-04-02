@@ -195,10 +195,13 @@ ScheduleGenerator = (user) => {
                 const nodeString = String(node);
                 const period = user.periods.find(period => String(period._id) == nodeString.slice(0, 24));
                 console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
-                // io.emit("message", {
-                //     case: "warning",
-                //     message: "WARNING:The period " + period.periodName + " causing impossible time table config."
-                // });
+                process.send({
+                    case: "emit",
+                    emit: {
+                        case: "warning",
+                        message: "WARNING:The period " + period.periodName + " causing impossible time table config."
+                    }
+                });
 
             }
         }

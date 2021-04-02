@@ -25,10 +25,11 @@
         switch (message.case) {
             case "message":
                 console.log(message.message);
-                function1(message.message)
+                function1(message.message);
                 break;
             //case "complete": when we have a server,it should point to its user + viewSchedule
             default:
+                function1(message.message);
                 break;
         }
     });
@@ -37,6 +38,7 @@
         var li = document.createElement("li");
         li.appendChild(document.createTextNode(message));
         ul.appendChild(li);
+        window.scrollTo(0,document.body.scrollHeight);
     }
 </script>
 

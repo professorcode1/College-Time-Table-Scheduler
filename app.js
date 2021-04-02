@@ -91,12 +91,12 @@ const userSchema = new mongoose.Schema({
     },
     numberOfDays: {
         type: Number,
-        default: 0,
+        default: 1,
         required: true
     },
     periodsPerDay: {
         type: Number,
-        default: 0,
+        default: 1,
         required: true
     },
     schedule: {

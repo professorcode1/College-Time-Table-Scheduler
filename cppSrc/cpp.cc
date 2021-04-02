@@ -64,17 +64,33 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
     for (int i = 0; i < ceil(fraction_of_population_elite * population_size); i++)
         next_generation.push_back(previous_generation.at(i));
 
+
     printf("CrossOver\n");
-    while(next_generation.size() < population_size)
+    const int workPerThread = floor(static_cast<float>(crossovers) / numberOfThreads);
+    vector< future < vector<map < int,set<string> >> > > multiThread; //we multithread the crossover
+    for(int i=0 ; i<numberOfThreads-1 ; i++ )
+            multiThread.push_back(async(std::launch::async,[&previous_generation,this](const int numberOfTablesRequired)->vector<map<int,set<string> > >{
+                //cout<<numberOfTablesRequired << endl;
+                vector<map<int,set<string> > > returnVec;
+                for (int loop_var = 0; loop_var < numberOfTablesRequired; loop_var++)
+                    returnVec.push_back(crossover(previous_generation.at(tournament_selection(0, population_size - 1)),previous_generation.at(tournament_selection(0, population_size - 1))));
+                return returnVec;
+            },  workPerThread ));        
+    for (int loop_var = 0; loop_var < crossovers - (numberOfThreads-1) * workPerThread; loop_var++)
         next_generation.push_back(crossover(previous_generation.at(tournament_selection(0, population_size - 1)),previous_generation.at(tournament_selection(0, population_size - 1))));
-    
+        
+    for(int i=0 ; i<numberOfThreads-1 ; i++)
+        for(const auto table : multiThread.at(i).get())
+            next_generation.push_back(table);
+
+
     printf("mutate\n");
     //mutating some of it
     for (int i = 0; i < ceil(fraction_of_population_mutated * population_size); i++)
         mutate(next_generation.at(sudorandom_number_generator(0, population_size - 1)));
 
     printf("soritng\n");
-    merge_sort(next_generation, 0, next_generation.size() - 1);
+    custom_sort(next_generation);
     cout<<"Genetic algo complete"<<endl;
     return Napi::Number::New(env,1);
 
@@ -356,5 +372,29 @@ int tournament_selection(int left, int right)
         if (rndm2 <= n - rndm1 - 1)
             return rndm1 + left;
     }
+}
+void Cpp::custom_sort(vector< map<int, set< string > > > &arr)
+{
+    cout<<arr.size()<<endl;
+    vector<future<vector<pair<int,map<int,set<string > > > > > > multiThread;
+    vector<pair<int,map<int,set<string > > > > sortableVec;
+    const int workPerThread = population_size / numberOfThreads;
+    for(int i=0 ; i < numberOfThreads ; i++)
+        multiThread.push_back(async(std::launch::async,[&](const int left,const int right)->vector<pair<int,map<int,set<string > > > >{
+            cout<<left<<"   "<<right<<endl;
+                vector<pair<int,map<int,set<string > > > > returnVec;
+                for (int loop_var = left; loop_var < right; loop_var++)
+                    returnVec.push_back(make_pair(conflicts(arr.at(loop_var)),arr.at(loop_var)));
+                return returnVec;
+            }, i * workPerThread , (i+1)*workPerThread ));
+    for (int loop_var = (numberOfThreads-1) * workPerThread; loop_var < (numberOfThreads-1) * workPerThread + (population_size%numberOfThreads); loop_var++)
+                    sortableVec.push_back(make_pair(conflicts(arr.at(loop_var)),arr.at(loop_var)));
+    for(int i = 0 ;i <numberOfThreads ; i++)
+        for(const auto coloring : multiThread.at(i).get())
+            sortableVec.push_back(coloring);
+    sort(sortableVec.begin(),sortableVec.end(),[](const pair<int,map<int,set<string > > > &left,const pair<int,map<int,set<string > > > &right)->bool{return left.first < right.first;});
+    cout<<endl<<sortableVec.size()<<endl;
+    for(int i=0 ; i<population_size ; i++)
+        arr.at(i) = sortableVec.at(i).second;
 }
 NODE_API_MODULE(addon, Init)

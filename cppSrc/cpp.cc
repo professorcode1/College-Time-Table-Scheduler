@@ -48,14 +48,29 @@ Cpp::Cpp(const Napi::CallbackInfo& info) : ObjectWrap(info) {
         this->next_generation.push_back(this->random_coloring());
     
     cout<<"Calling merge sort"<<endl;
-    merge_sort(next_generation, 0, next_generation.size() - 1);
+    custom_sort(next_generation);
+    genSinceImporvment = 0;
+    leastConflictSoFar = this->conflicts(this->next_generation.front());
+    CppNativeBestSoFar = next_generation.front();
     cout<<"Construction complete"<<endl;
 }
 
 Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& info) {
     
     Napi::Env env = info.Env();
-    printf("Genetic algorithm engaged\n");
+    printf("Genetic algorithm engaged\n Generations since improvment = %d \n",genSinceImporvment);
+    if(genSinceImporvment > 100)
+    {
+        for (int i = 0; i < population_size; i++)
+            this->next_generation.at(i) = this->random_coloring();
+        custom_sort(next_generation);
+        genSinceImporvment = 0;
+        leastConflictSoFar = this->conflicts(this->next_generation.front());
+        cout<<"Restarting algorithm"<<endl;
+        numberOfResets++;
+        if(numberOfResets >= numberOfResetsToleranceValue)
+            return Napi::Number::New(env,1);
+    }
     cout<<next_generation.size()<<endl;
     vector<map<int,set<string> > > previous_generation(this->next_generation);
     this->next_generation.clear();
@@ -91,8 +106,15 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
 
     printf("soritng\n");
     custom_sort(next_generation);
+    if(leastConflictSoFar <= this->conflicts(this->next_generation.front()))
+        genSinceImporvment++;
+    else{
+        genSinceImporvment = 0;
+        leastConflictSoFar = this->conflicts(this->next_generation.front());
+        CppNativeBestSoFar = next_generation.front();
+    }
     cout<<"Genetic algo complete"<<endl;
-    return Napi::Number::New(env,1);
+    return Napi::Number::New(env,0);
 
 }
 Napi::Value Cpp::conflicts_in_best_so_far_coloring(const Napi::CallbackInfo& info){
@@ -103,8 +125,7 @@ Napi::Value Cpp::conflicts_in_best_so_far_coloring(const Napi::CallbackInfo& inf
 Napi::Value Cpp::best_so_far(const Napi::CallbackInfo& info){
     Napi::Env env = info.Env();
     Object bestColoring = Object::New(env);
-    map<int,set<string> > best_coloring = this->next_generation.front();
-    for(map<int,set<string> >::iterator clrng_itrt = best_coloring.begin() ; clrng_itrt != best_coloring.end() ; ++clrng_itrt)
+    for(map<int,set<string> >::iterator clrng_itrt = CppNativeBestSoFar.begin() ; clrng_itrt != CppNativeBestSoFar.end() ; ++clrng_itrt)
         for(set<string>::iterator nodeItrt = clrng_itrt->second.begin() ; nodeItrt != clrng_itrt->second.end() ; ++nodeItrt)
             bestColoring.Set(*nodeItrt,clrng_itrt->first);
     return bestColoring;
@@ -375,14 +396,12 @@ int tournament_selection(int left, int right)
 }
 void Cpp::custom_sort(vector< map<int, set< string > > > &arr)
 {
-    cout<<arr.size()<<endl;
     vector<future<vector<pair<int,map<int,set<string > > > > > > multiThread;
     vector<pair<int,map<int,set<string > > > > sortableVec;
     const int workPerThread = population_size / numberOfThreads;
     for(int i=0 ; i < numberOfThreads ; i++)
         multiThread.push_back(async(std::launch::async,[&](const int left,const int right)->vector<pair<int,map<int,set<string > > > >{
-            cout<<left<<"   "<<right<<endl;
-                vector<pair<int,map<int,set<string > > > > returnVec;
+            vector<pair<int,map<int,set<string > > > > returnVec;
                 for (int loop_var = left; loop_var < right; loop_var++)
                     returnVec.push_back(make_pair(conflicts(arr.at(loop_var)),arr.at(loop_var)));
                 return returnVec;
@@ -393,7 +412,6 @@ void Cpp::custom_sort(vector< map<int, set< string > > > &arr)
         for(const auto coloring : multiThread.at(i).get())
             sortableVec.push_back(coloring);
     sort(sortableVec.begin(),sortableVec.end(),[](const pair<int,map<int,set<string > > > &left,const pair<int,map<int,set<string > > > &right)->bool{return left.first < right.first;});
-    cout<<endl<<sortableVec.size()<<endl;
     for(int i=0 ; i<population_size ; i++)
         arr.at(i) = sortableVec.at(i).second;
 }

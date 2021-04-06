@@ -64,6 +64,9 @@
 
           <div>
             Set the time at which this period must happen? <b>This feature(selecting ban-time/set-time) only works if the period frequency is one.If both are provided set-time will be applied.</b>
+            The time you select as the ban time only bans the start of the period from being able to take that time.For example, say you have a manufacturing lab of 3 hours, and you select 
+            Day 3 Period 2 as a ban time,well in that case the period can't start at Day 3 periods 2, but it could still start at period 1 and hence take period 2 and 3.
+            Keep that in mind.
             <input type="checkbox" name="specifyTime" value="true"> <br>
             Day Starting at 1 & ending at <%=numberOfDays%>: <input type="number" min="1" max=<%=numberOfDays%>
                     name="timeSpeicifiedDay"> <br>

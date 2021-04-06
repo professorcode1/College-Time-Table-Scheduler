@@ -161,6 +161,12 @@ ScheduleGenerator = (user) => {
                 for (let len = 0; len < Number(period.periodLength); len++) {
                     const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
 
+                    //a corner case someone can use to break the application is to make 1 period for a university with 1 day and 1 period per day
+                    //thus creating a graph in which case neither the nodes will come into existence since the graph is intialised via edges
+                    //to avoide that edge case i.e. any graph with disjoint nodes,all nodes are first attached then detacched from 0,to create the nodes
+                    schedulerGraph.set(0,thisPeriodNode);
+                    schedulerGraph.del(0,thisPeriodNode);
+
                     for (let freq1 = 0; freq1 < freq; freq1++)
                         for (let len1 = 0; len1 < Number(period.periodLength); len1++)
                             schedulerGraph.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
@@ -236,9 +242,24 @@ ScheduleGenerator = (user) => {
             obj["frequency"] = Number(period.periodFrequency);
             periodsCppArgs.push(obj);
         }
+        console.log("Calling genetic algorithm constructor.");
         const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay, schedulerGraph._vertices.length, ...nodesThenItsNeighbors, PerLnGtOne, user.periods.length, ...periodsCppArgs);
+        console.log("starting loop");
         while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
-            GeneticAlgorithmObject.geneticAlgorithmForGraphColoring();
+            console.log("calling the algorithm");
+            if (GeneticAlgorithmObject.geneticAlgorithmForGraphColoring()) {
+                process.send({
+                    case: "emit",
+                    emit: {
+                        case: "abort",
+                        message: "The algorithm has failed to generate the table.You can view the best it could generate,but it will be fauty"
+                    }
+                });
+                let schedule = new Object();
+                schedule.case = "schedule";
+                schedule.schedule = GeneticAlgorithmObject.bestSoFar();
+                return schedule;
+            }
             process.send({
                 case: "emit",
                 emit: {

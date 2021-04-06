@@ -413,6 +413,37 @@ app.post("/parameter", async (req, res) => {
         await promiseThree;
         return res.redirect("/group");
     });
+    app.get("/editGroup/:groupId", (req, res) => {
+        const group = req.user.groups.find(group => group._id == req.params.groupId);
+        res.render("editGroup", {
+            group: group,
+            numberOfDays : req.user.numberOfDays,
+            periodsPerDay : req.user.periodsPerDay
+        });
+    });
+    app.post("/editGroup/:groupId", async (req, res) => {
+        const group = req.user.groups.find(group => group._id == req.params.groupId);
+        unAvialability = new Array(0);
+        for (let loopitrt = 0; loopitrt < req.user.numberOfDays * req.user.periodsPerDay; loopitrt++)
+            if (req.body["periodTaken" + String(loopitrt)] === "on")
+                unAvialability.push(loopitrt);
+        await User.updateOne({
+            _id: req.user._id ,
+            "groups._id" : req.params.groupId
+        }, {
+            $set: {
+                "groups.$": {
+                    groupName: req.body.groupName,
+                    groupQuantity: req.body.groupQuantity,
+                    unAvialability: unAvialability,
+                    periodsAttended : group.periodsAttended,
+                    coursesTaken: group.coursesTaken,
+                    _id : group._id
+                }
+            }
+        });
+        return res.redirect("/group");
+    });
 }
 //Rooms
 {
@@ -478,8 +509,8 @@ app.post("/parameter", async (req, res) => {
         for (const course of req.user.courses) {
             let taughtBy = new Array(0),
                 taughtTo = new Array(0);
-            if (course.taughtBy.length == 0 || course.taughtTo.length == 0)
-                return res.redirect("/deleteCourse/" + String(course._id));
+            // if (course.taughtBy.length == 0 || course.taughtTo.length == 0)
+            //     return res.redirect("/deleteCourse/" + String(course._id));
             for (const professor of course.taughtBy)
                 taughtBy.push(req.user.professors.find(prof => String(prof._id) == professor).profName);
             for (const groupId of course.taughtTo)
@@ -867,128 +898,133 @@ app.post("/parameter", async (req, res) => {
     });
 }
 //time table
-app.get("/generateSchedule", async (req, res) => {
-    if (!req.isAuthenticated())
-        return res.redirect("/login");
-    if (req.user.periods.length == 0)
-        return res.render("message", {
-            message: "Please make some periods first"
-        });
-    else {
-        console.log(req.user.periods.length, req.user.periods.length == 0)
-        res.sendFile(__dirname + "/webPages/waitingPage.html");
-        const childProcess = fork("./ScheduleGenerator.js");
+{
 
-        setTimeout(() => childProcess.send({
-            "user": CircularJSON.stringify(req.user),
-            "io": CircularJSON.stringify(req.app.get('socketio'))
-        }), 3000);
+    app.get("/generateSchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        if (req.user.periods.length == 0)
+            return res.render("message", {
+                message: "Please make some periods first"
+            });
+        else {
+            console.log(req.user.periods.length, req.user.periods.length == 0)
+            res.sendFile(__dirname + "/webPages/waitingPage.html");
+            const childProcess = fork("./ScheduleGenerator.js");
+
+            setTimeout(() => childProcess.send({
+                "user": CircularJSON.stringify(req.user),
+                "io": CircularJSON.stringify(req.app.get('socketio'))
+            }), 3000);
 
 
-        childProcess.on("message", async message => {
-            if (message.case == "emit")
-                io.emit("message", message.emit);
-            if (message.case == "schedule") {
-                io.emit("message", {
-                    case: "message",
-                    message: "schedule complete.Redirecting you shotly"
-                });
-                io.emit("message", {
-                    case: "complete"
-                });
-                console.log(message.schedule, typeof message.schedule);
+            childProcess.on("message", async message => {
+                if (message.case == "emit")
+                    io.emit("message", message.emit);
+                if (message.case == "schedule") {
+                    io.emit("message", {
+                        case: "message",
+                        message: "schedule complete.Redirecting you shotly"
+                    });
+                    io.emit("message", {
+                        case: "complete"
+                    });
+                    console.log(message.schedule, typeof message.schedule);
 
-                console.log(await User.updateOne({
-                    _id: req.user._id
-                }, {
-                    $set: {
-                        schedule: message.schedule
-                    }
-                }));
+                    console.log(await User.updateOne({
+                        _id: req.user._id
+                    }, {
+                        $set: {
+                            schedule: message.schedule
+                        }
+                    }));
+                }
+            });
+        }
+    });
+    app.get("/viewSchedules", async (req, res) => {
+        const scheduleArray = await User.find({
+            schedule: {
+                $exists: true
             }
+        }, {
+            instituteName: 1,
+            _id: 1
         });
-    }
-});
-app.get("/viewSchedules", async (req, res) => {
-    const scheduleArray = await User.find({
-        schedule: {
-            $exists: true
-        }
-    }, {
-        instituteName: 1,
-        _id: 1
-    });
-    res.render("listOfInstitutes", {
-        list: scheduleArray
-    });
-});
-app.get("/schedule/:userId", async (req, res) => {
-    id = req.params.userId;
-    const user = await User.findById(id);
-    if (!user)
-        return res.render("message", {
-            message: "User does not exist"
+        res.render("listOfInstitutes", {
+            list: scheduleArray
         });
-    let sendTable = new Map();
-    const {
-        numberOfDays,
-        periodsPerDay
-    } = user;
-    for (const group of user.groups) {
-        let table = new Array(numberOfDays);
-        for (let i = 0; i < numberOfDays; i++)
-            table[i] = new Array(periodsPerDay);
-        for (let i = 0; i < numberOfDays; i++)
-            for (let j = 0; j < periodsPerDay; j++)
-                table[i][j] = "Free Period";
-        for (const periodId of group.periodsAttended) {
-            const period = user.periods.find(period => String(period._id) == periodId);
-            //console.log(periodId,period);
-            for (let len = 0; len < Number(period.periodLength); len++)
-                for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
-                    const time = user.schedule[String(periodId)+"Period"+len+"Freq"+freq];
-                    //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
-                    table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
-                }
-        }
-        sendTable.set(group.groupName, table);
-    }
-    for (const prof of user.professors) {
-        let table = new Array(numberOfDays);
-        for (let i = 0; i < numberOfDays; i++)
-            table[i] = new Array(periodsPerDay);
-        for (let i = 0; i < numberOfDays; i++)
-            for (let j = 0; j < periodsPerDay; j++)
-                table[i][j] = "Free Period";
-        for (const periodId of prof.periodsTaken) {
-            const period = user.periods.find(period => String(period._id) == periodId);
-            //console.log(periodId,period);
-            for (let len = 0; len < Number(period.periodLength); len++)
-                for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
-                    const time = user.schedule[String(periodId)+"Period"+len+"Freq"+freq];
-                    //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
-                    table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
-                }
-        }
-        sendTable.set(prof.profName, table);
-    }
-    //console.log(sendTable);
-    res.render("timetable", {
-        sendTable: sendTable,
-        numberOfDays: numberOfDays,
-        periodsPerDay: periodsPerDay
     });
-});
-app.get("/viewMySchedule", async (req, res) => {
-    if (!req.isAuthenticated())
-        res.redirect("/login");
-    const scheduleExists = User.findById(req.user._id, "schedule");
-    if (!scheduleExists)
-        res.render("message", {
-            message: "make a schedule first"
+    app.get("/schedule/:userId", async (req, res) => {
+        id = req.params.userId;
+        const user = await User.findById(id);
+        if (!user)
+            return res.render("message", {
+                message: "User does not exist"
+            });
+        let sendTable = new Map();
+        const {
+            numberOfDays,
+            periodsPerDay
+        } = user;
+        for (const group of user.groups) {
+            let table = new Array(numberOfDays);
+            for (let i = 0; i < numberOfDays; i++)
+                table[i] = new Array(periodsPerDay);
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    table[i][j] = "Free Period";
+            for (const periodId of group.periodsAttended) {
+                const period = user.periods.find(period => String(period._id) == periodId);
+                //console.log(periodId,period);
+                for (let len = 0; len < Number(period.periodLength); len++)
+                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
+                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
+                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
+                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
+                    }
+            }
+            sendTable.set(group.groupName, table);
+        }
+        for (const prof of user.professors) {
+            let table = new Array(numberOfDays);
+            for (let i = 0; i < numberOfDays; i++)
+                table[i] = new Array(periodsPerDay);
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    table[i][j] = "Free Period";
+            for (const periodId of prof.periodsTaken) {
+                const period = user.periods.find(period => String(period._id) == periodId);
+                //console.log(periodId,period);
+                for (let len = 0; len < Number(period.periodLength); len++)
+                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
+                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
+                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
+                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
+                    }
+            }
+            sendTable.set(prof.profName, table);
+        }
+        //console.log(sendTable);
+        res.render("timetable", {
+            sendTable: sendTable,
+            numberOfDays: numberOfDays,
+            periodsPerDay: periodsPerDay
         });
+    });
+    app.get("/viewMySchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            res.redirect("/login");
+        const scheduleExists = User.findById(req.user._id, "schedule");
+        if (!scheduleExists)
+            res.render("message", {
+                message: "make a schedule first"
+            });
+        else
+            res.redirect("/schedule/" + String(req.user._id));
 
-});
+    });
+}
 async function deletePeriod(periodId, user) {
     const period = user.periods.find(period => String(period._id) == periodId);
 

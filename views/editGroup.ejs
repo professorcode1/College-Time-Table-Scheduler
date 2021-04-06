@@ -12,37 +12,34 @@
 <body>
 
 
+    <h1>Current Group</h1>
 <div class="container">
     <div class="row">
-        <%for(const group of groups){%>
       <div class="col-sm">
         <%=group.groupName%> : <%=group.groupQuantity%> <br>
             Free Periods <br>
             <%for(const busyPeriod of group.unAvialability){%>
             <%="D" + String(Math.floor(busyPeriod / periodsPerDay)+1) + "P" + String((busyPeriod % periodsPerDay) + 1)%>
             and <%}%> <br>
-            <a href="/editGroup/<%=group._id%>">Edit</a> <br>
         <a href="/deleteGroup/<%=group._id%>">Delete</a>
       </div>
-
-    <%}%>
     </div>
   </div>
         <br><br>
-        <form action="/group" method="post">
+        <form action="/editGroup/<%=group._id%>" method="post">
             Group Name
-            <input type="text" name="groupName" required>
+            <input type="text" name="groupName" required value="<%=group.groupName%>">
             Number of Students in the group
-            <input type="number" name="groupQuantity" required> <br> <br>
+            <input type="number" name="groupQuantity" value="<%=group.groupQuantity%>" required> <br> <br>
             Add the periods the groups have free. <br>
             <%for(let day =0 ; day < numberOfDays ; day++){%>
             Day <%=day+1%> : <% for(let period=0 ; period < periodsPerDay ; period++){ %>
             <input type="checkbox" name=<%="periodTaken" + String(day*periodsPerDay + (period))%>
-                id=<%="periodTaken" + String(day*periodsPerDay + (period))%>>
+                id=<%="periodTaken" + String(day*periodsPerDay + (period))%> <%=group.unAvialability.includes(day*periodsPerDay + period) ? "checked" : "haha" %> >
             <label for=<%="periodTaken" + String(day*periodsPerDay + (period))%>> <%="Period "+String(period+1)%>
             </label>
             <%}%> <br> <%}%>
-            <button type="submit">Add this Group</button>
+            <button type="submit">Update this Group</button>
         </form>
         <br><br>
         Click <a href="/homepage">here</a> to goto homepage.

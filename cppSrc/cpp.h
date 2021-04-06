@@ -24,7 +24,10 @@ private:
     int chromaticNumber;
     std::map<std::string,std::pair<int,int>> PerLenGtOne;
     int numberOfPeriods;
-
+    int genSinceImporvment; //this keeps track of how many generations ago the last imporvment was made.If this number gets large the algo restarts
+    int leastConflictSoFar;
+    int numberOfResets;
+    std::map<int,std::set<std::string> > CppNativeBestSoFar;
 
     int conflicts(const std::map<int,std::set<std::string> > &coloring);
     std::map<int,std::set<std::string> > random_coloring();
@@ -54,6 +57,8 @@ std::mt19937 g2(std::chrono::system_clock::now().time_since_epoch().count());
 const int population_size{800},numberOfThreads{15};
 const float probability_of_mutation{0.01}, fraction_of_population_mutated{0.15}, fraction_of_population_elite{0.1};
 const int crossovers = population_size-ceil(fraction_of_population_elite * population_size);
+const int genSinceImporvmentToleranceValue{100};
+const int numberOfResetsToleranceValue{5};
 using namespace std;
 inline int sudorandom_number_generator(int left, int right);
 int tournament_selection(int left, int right);

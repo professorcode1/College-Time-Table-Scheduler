@@ -9,10 +9,9 @@ To use this, follow the below steps.
 - Make sure you have node installed
 - Make sure you have Python 3.6(or above),make and GCC installled(for unix/linux)
 - for any other OS refer here to know the dependencies https://www.npmjs.com/package/node-gyp
-- run `npm install` to get all the node modules
 - run `npm -g node-gyp` to get the gyp compiler
-- run `node-gyp configure` in terminal to configure
-- run `node-gyp build` to generate a build folder
+- run `node-gyp configure` in terminal to configure it to your machine
+- run `npm install` to get all the node modules as well as generate the build files
 - cut and paste this build folder into the node_modules folder
 - have a mongod server on your local machine up and running
 - replace the string `"mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"` on lines 41 and 52 with `"mongodb://localhost:27017/collegeScheduler"`
@@ -23,7 +22,7 @@ It can be tedius to make your own dataset. So to use the dataset I used, the dat
 `mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
 Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset.
 
-The application currently lacks a front-end and also the `/generateSchedule` page does not re-route the user once the schedule is generate as it claims. However it does update the database.
+The application currently lacks a front-end and also the `/generateSchedule` page does not re-route the user once the schedule is generate as it claims. However it does update the database. So once the website says "rerouting you shortly" goto the `http://localhost:3000/viewMySchedule` manually.
 
 * * *
 

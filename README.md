@@ -18,6 +18,7 @@ To use this, follow the below steps.
 - for any other OS refer here to know the dependencies https://www.npmjs.com/package/node-gyp
 - open the terminal in the folder of the project
 - run `npm install -g node-gyp` to get the gyp compiler
+- run `npm install node-addon-api` 
 - run `node-gyp configure` in terminal to configure it to your machine
 - run `npm install` to get all the node modules as well as generate the build files
 - cut and paste this build folder into the node_modules folder

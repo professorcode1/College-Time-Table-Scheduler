@@ -5,41 +5,186 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <style>
+        @font-face {
+            font-family: hacker_font;
+            src: url(Roboto_Mono/RobotoMono-VariableFont_wght.ttf);
+        }
+
+        body,
+        html {
+            height: 100%
+        }
+
+        canvas {
+            display: block;
+            vertical-align: bottom;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: black
+        }
+
+        .text {
+            position: absolute;
+            /* top: 50%; */
+            /* right: 50%; */
+            /* transform: translate(50%, -50%); */
+            color: white;
+            max-width: 90%;
+            padding: 2em 3em;
+            background: rgba(0, 0, 0, 0.4);
+            text-shadow: 0px 0px 2px #131415;
+            font-family: hacker_font;
+        }
+
+        li {
+            color: white;
+        }
+    </style>
+    <title>Waiting...</title>
 </head>
 
 <body>
-    This website is used to make the user wait while the time table is being generated.The user will get real-time
-    updates on the progress of the table.
-    <ul id="list">
+    <div id="particles-js"></div>
+    <div class="text" id="main_div">
+        <ol id="list">
+        </ol>
+    </div>
 
-    </ul>
 </body>
 <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"
     integrity="sha384-DkkWv9oJFWLIydBXXjkBWnG1/fuVhw8YPBq37uvvD6WSYRFRqr21eY5Dg9ZhmWdy"
     crossorigin="anonymous"></script>
 <script>
     const socket = io();
+    var numberOfCanva = 1;
     //case can be message,warning,abort,complete
     socket.on("message", message => {
         switch (message.case) {
             case "message":
-                console.log(message.message);
-                function1(message.message);
+                initialising(message.message);
                 break;
-            //case "complete": when we have a server,it should point to its user + viewSchedule
+            case "Initalisation_Success":
+                Initalisation_Success(message.message);
+                break;
+            case "warning":
+                warning(message.message);
+                break;
+            case "abort":
+                abort(message.message);
+                break;
+            case "algorithm_update":
+                updateCounters(message);
+                break;
+            case "complete":
+                complete();
+                break;
+            case "failure":
+                failure();
+                break;
             default:
-                function1(message.message);
+                console.log(message);
                 break;
         }
     });
-    function function1(message) {
+    function failure(){
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:yellow");
+        greenPart.appendChild(document.createTextNode("FAILURE::The algorithm has failed. You can see the best schedule it has generated, but it will have errors."));
+        document.getElementById("main_div").appendChild(greenPart);
+        complete();
+    }
+    function complete() {
+        document.getElementById("main_div").appendChild(document.createElement("br"));
+        var h3 = document.createElement("h3");
+        var a = document.createElement("a");
+        a.setAttribute("href", "/viewMySchedule");
+        a.innerHTML = " here ";
+        h3.appendChild(document.createTextNode("Click "));
+        h3.appendChild(a);
+        h3.appendChild(document.createTextNode(" to redirect to your schedule"));
+        document.getElementById("main_div").appendChild(h3);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function updateCounters(params) {
+        document.getElementById("generationCounter").innerHTML = params.generation;
+        document.getElementById("conflictCounter").innerHTML = params.conflicts;
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function abort(message) {
         var ul = document.getElementById("list");
         var li = document.createElement("li");
-        li.appendChild(document.createTextNode(message));
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:red");
+        greenPart.appendChild(document.createTextNode("ABORTING::Fix all period/s throwing warning to proceed with generation"));
+        li.appendChild(greenPart);
         ul.appendChild(li);
-        window.scrollTo(0,document.body.scrollHeight);
+        window.scrollTo(0, document.body.scrollHeight);
     }
+    function warning(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("h2");
+        greenPart.setAttribute("style", "color:white");
+        greenPart.appendChild(document.createTextNode(message));
+        li.appendChild(greenPart);
+        ul.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function Initalisation_Success(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("h3");
+        greenPart.setAttribute("style", "color:rgb(0,255,122)");
+        greenPart.appendChild(document.createTextNode(message));
+        li.appendChild(greenPart);
+        ul.appendChild(li);
+        var mainDiv = document.getElementById("main_div");
+        var updateCounter = document.createElement("h1");
+        var generationCounter = document.createElement("span");
+        generationCounter.setAttribute("id", "generationCounter");
+        var conflictCounter = document.createElement("span");
+        conflictCounter.setAttribute("id", "conflictCounter");
+        updateCounter.appendChild(document.createTextNode("Generation::"));
+        updateCounter.appendChild(generationCounter);
+        updateCounter.appendChild(document.createElement("br"));
+        updateCounter.appendChild(document.createTextNode("Conflict Counter::"));
+        updateCounter.appendChild(conflictCounter);
+        mainDiv.appendChild(updateCounter);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function initialising(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("span");
+        greenPart.setAttribute("style", "color:rgb(0,255,122)");
+        greenPart.appendChild(document.createTextNode(message.substr(0, 12)));
+        var orangePart = document.createElement("span");
+        orangePart.setAttribute("style", "color:#b36200");
+        orangePart.appendChild(document.createTextNode(message.substr(14, message.length - 1)));
+        li.appendChild(greenPart);
+        li.appendChild(document.createTextNode("::"));
+        li.appendChild(orangePart);
+        ul.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+        // var head = document.getElementById("head");
+        // var upperHead = document.getElementById("particles-js");
+        // var el = document.querySelector(".particles-js-canvas-el");
+        // el.setAttribute("position","fixed");
+        // el.setAttribute("z-index","-999");
+        // //head.style.height = Math.max(head.style.height, ul.offsetHeight);
+        // //upperHead.style.height = Math.max(upperHead.style.height, ul.offsetHeight);
+        // //console.log(head.style.height, ul.offsetHeight);
+        // el.setAttribute("height", String(Math.max(window.screen.height, ul.offsetHeight)) + "px");
+    }
+</script>
+<script src="particles.js-master/particles.js">
+</script>
+<script src="/particles.js-master/demo/js/app.js">
 </script>
 
 </html>

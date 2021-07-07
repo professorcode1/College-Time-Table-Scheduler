@@ -31,7 +31,7 @@ ScheduleGenerator = (user) => {
             case: "emit",
             emit: {
                 case: "message",
-                message: "Initialising graph"
+                message: "Initialising::Graph"
             }
         });
         console.log("Initialising graph");
@@ -56,7 +56,7 @@ ScheduleGenerator = (user) => {
             case: "emit",
             emit: {
                 case: "message",
-                message: "Initialise::Rooms Complete"
+                message: "Initialising::Rooms Complete"
             }
         });
         console.log("Initialise::Rooms Complete");
@@ -75,7 +75,7 @@ ScheduleGenerator = (user) => {
             case: "emit",
             emit: {
                 case: "message",
-                message: "Initialise::Professors Complete"
+                message: "Initialising::Professors Complete"
             }
         });
         console.log("Initialise::Prof Done");
@@ -94,7 +94,7 @@ ScheduleGenerator = (user) => {
             case: "emit",
             emit: {
                 case: "message",
-                message: "Initialise::Groups Complete"
+                message: "Initialising::Groups Complete"
             }
         });
         console.log("Initialise::Group Done");
@@ -181,15 +181,6 @@ ScheduleGenerator = (user) => {
 
                 }
 
-        process.send({
-            case: "emit",
-            emit: {
-                case: "message",
-                message: "Initialisation Complete"
-            }
-        });
-        console.log("Initialisation Complete");
-
         //Checking if time table is possible
         let abort = false;
         for (const node in schedulerGraph._graph) {
@@ -215,11 +206,20 @@ ScheduleGenerator = (user) => {
             return {
                 case: "emit",
                 emit: {
-                    case: "abort",
-                    message: "Abort::Aborting Generatin::Ammend the above periods for schedule generation."
+                    case: "abort"
                 }
             };
     }
+
+    process.send({
+        case: "emit",
+        emit: {
+            case: "Initalisation_Success",
+            message: "Initialisation::Complete"
+        }
+    });
+    console.log("Initialisation Complete");
+
     //Calling the genetic algorithm in c++
     {
         let nodesThenItsNeighbors = new Array();
@@ -243,16 +243,17 @@ ScheduleGenerator = (user) => {
             periodsCppArgs.push(obj);
         }
         console.log("Calling genetic algorithm constructor.");
+        let generation = 0;
         const GeneticAlgorithmObject = new GeneticAlgorithm.Cpp(numberOfDays * periodsPerDay, schedulerGraph._vertices.length, ...nodesThenItsNeighbors, PerLnGtOne, user.periods.length, ...periodsCppArgs);
         console.log("starting loop");
         while (GeneticAlgorithmObject.conflictsInBestSoFarColoring() > 0) {
+            generation = generation + 1;
             console.log("calling the algorithm");
             if (GeneticAlgorithmObject.geneticAlgorithmForGraphColoring()) {
                 process.send({
                     case: "emit",
                     emit: {
-                        case: "abort",
-                        message: "The algorithm has failed to generate the table.You can view the best it could generate,but it will be fauty"
+                        case: "failure"
                     }
                 });
                 let schedule = new Object();
@@ -263,8 +264,9 @@ ScheduleGenerator = (user) => {
             process.send({
                 case: "emit",
                 emit: {
-                    case: "message",
-                    message: "Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring()
+                    case: "algorithm_update",
+                    conflicts : GeneticAlgorithmObject.conflictsInBestSoFarColoring(),
+                    generation : generation
                 }
             });
             console.log("Current Conflicts in graph being colored:" + GeneticAlgorithmObject.conflictsInBestSoFarColoring());

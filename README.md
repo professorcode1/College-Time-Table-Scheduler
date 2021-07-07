@@ -1,6 +1,13 @@
 # **College Scheduler**
 
-This the software engineering project made by me as the semester 4 engineering project. Its solves the common university problem of having to perfrom tedius scheduling.
+This the software engineering project made by me as the semester 4 engineering project. Its solves the common university problem of having to perfrom tedious scheduling.
+
+<img alt="preview" src="ImagesOfProject/Waiting-.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Waiting-1.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Homepage.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Courses.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Scheduler.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Professors.png" width="90%">
 
 To use this, follow the below steps.
 
@@ -9,6 +16,7 @@ To use this, follow the below steps.
 - Make sure you have node installed
 - Make sure you have Python 3.6(or above),make and GCC installled(for unix/linux)
 - for any other OS refer here to know the dependencies https://www.npmjs.com/package/node-gyp
+- open the terminal in the folder of the project
 - run `npm -g node-gyp` to get the gyp compiler
 - run `node-gyp configure` in terminal to configure it to your machine
 - run `npm install` to get all the node modules as well as generate the build files
@@ -21,8 +29,6 @@ To use this, follow the below steps.
 It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in the mongodb shell
 `mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
 Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset.
-
-The application currently lacks a front-end and also the `/generateSchedule` page does not re-route the user once the schedule is generate as it claims. However it does update the database. So once the website says "rerouting you shortly" goto the `http://localhost:3000/viewMySchedule` manually.
 
 * * *
 
@@ -38,7 +44,7 @@ In the app.js file, only the logic for interacting with the database is written.
 - Each resource can be assosiated ban-time. Times where said resource cannot have/be used for a period. Professor who need to go home early, rooms reserved for other periods. Lunch break of student groups.
 - `User` also constitutes `courses` which are a combination of `professors`(those who teach it) and `groups`(those who learn it). A course is not useful for the generation of the schedule however it helps the user organise and query the data more easily.
 - A `course` is composed of `periods`. A period can have a set-time i.e. when a period needs to happen. For example, egnineering drawing tutorial needs to happen on monday morning period 2 as that is the only time the patial professor is available. Also if you choose not to assign a set-time to a period, you can also assign ban-time's. These define when a period can't happen. I.e. manufacturing lab cannot happen before lunch as the students may pass out from hunger. You can also choose not to define either.
-- If the `user` generates a schedule then said user also has one schedule object. A JSON object that maps all periods to a number(day and time) such that they don't have any conflicting resources and don't break the contraints set by the set-time/ban-time.
+- If the `user` generates a schedule then said user also has one schedule object. The schedule is a JSON object that maps all periods to a number(day and time) such that they don't have any conflicting resources and don't break the contraints set by the set-time/ban-time.
 
 The database queries should be done in the form of procedures and functions implemented inside the database(instead of in the application). I didn't know this when I made this project as it was long before semester four started and hence I didn't yet start studying DBMS. This is also why I used MongoDB instead of MySQL which would have been the far more sensible choise (226 out of the 1278 lines in app.js are so that resources can be deletes without compromising the database integrity. To have the same effect in MySQL the only thing that would have to be done was to include `ON DELETE CASCADE` for all primary keys in the schema of all the relations). At the time of this project I simply did not know SQL.
 

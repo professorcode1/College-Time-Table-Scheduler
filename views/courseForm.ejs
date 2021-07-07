@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professors</title>
+    <title>Courses</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+
 </head>
 
 <body>
-
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark p-2">
         <span class="navbar-brand" href="#">Scheduler</span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
@@ -26,7 +26,7 @@
                     <a class="nav-link" href="/parameter">Days/Hours</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/professor">Professor<span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="/professor">Professor</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/group">Group</a>
@@ -45,26 +45,41 @@
             </ul>
         </div>
     </nav>
-<p class="text-center m-2 display-2">Professors</p>
-    <div class="container">
-        <div class="row">
+    <p class="m-2 text-center display-2">Create Course</p>
+    <div class="card mx-5 text-center">
+        <div class="card-body">
+            <form action="/course" method="post">
 
+                Course Name
+                <input type="text" name="courseName" required><br>
 
-            <%for(const prof of profs){%>
-            <div class="col-lg-2 border rounded border-success">
-                <h1><%=prof.profName%></h1>  <br>
-                    Busy Periods <br>
-                    <%for(const busyPeriod of prof.unAvialability){%>
-                    <%="D" + String(Math.floor(busyPeriod / periodsPerDay)+1) + "P" + String((busyPeriod % periodsPerDay) + 1)%>
-                    AND <%}%> <br>
-                    <a href="/deleteProfessor/<%=prof._id%>">Delete</a>
-          </div>
-      <%}%>
+                Professors teaching : 
+                <%for(const prof of profs){%>
+                    <input type="checkbox" name=<%=prof._id%> id=<%=prof._id%>>
+                        <label for=<%=prof._id%>> <%=prof.profName%> </label>
+                        <%}%> <br> <br>
+
+                            Groups Studying : 
+                            <%for(const group of groups){%>
+                                <input type="checkbox" name=<%=group._id%> id=<%=group._id%>>
+                                    <label for=<%=group._id%>> <%=group.groupName%> </label>
+                                    <%}%> <br> <br>
+                                        <h2>Fill the below 3 boxes with 0 if you don't wanna use the standard template.
+                                        </h2>
+                                        Select the number of Lectures for this course. <input type="number" required
+                                            min="0" name="numberOfLectures"> <br>
+                                        Select the number of Tutorials for this course. <input type="number" required
+                                            min="0" name="numberOfTutorials"> <br>
+                                        Select the number of Labs for this course. <input type="number" required min="0"
+                                            name="numberOfLabs"> <br>
+
+                                        <button type="submit">Add this Course</button>
+            </form>
         </div>
     </div>
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous">
-</script>
+    integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+    crossorigin="anonymous"></script>
 
 </html>

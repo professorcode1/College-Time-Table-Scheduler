@@ -1,16 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
     <title>Login</title>
 </head>
-<body>
-    <form action="/login" method="post">
-        <input type="text" name="username" required>
-        <input type="password" name="password" required>
-        <button type="submit">Submit</button>
-    </form>
+
+<body style="background-image:url('login.jpg');background-size: cover;">
+    <div>
+        <p class="p-4 text-white text-center display-2"> Log In</p>
+        <form class="p-5 text-white h4" action="/login" method="post">
+            <div class="form-group">
+                <label for="exampleInputEmail1">Username</label>
+                <input type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp"
+                    placeholder="Enter username" required name="username">
+            </div>
+            <div class="form-group pt-4">
+                <label for="exampleInputPassword2">Password</label>
+                <input type="password" class="form-control" id="exampleInputPassword2" placeholder="Password" required
+                    name="password">
+            </div>
+            <button type="submit" class="btn btn-outline-success mt-3 px-5">Submit</button>
+        </form>
+
+    </div>
 </body>
+
 </html>

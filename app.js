@@ -283,6 +283,14 @@ app.post("/parameter", async (req, res) => {
             periodsPerDay: req.user.periodsPerDay
         });
     });
+    app.get("/professorForm", (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        return res.render("professorForm", {
+            numberOfDays: req.user.numberOfDays,
+            periodsPerDay: req.user.periodsPerDay
+        });
+    });
     app.post("/professor", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");
@@ -302,7 +310,7 @@ app.post("/parameter", async (req, res) => {
                 }
             }
         });
-        return res.redirect("/professor");
+        return res.redirect("/professorForm");
     });
     app.get("/deleteProfessor/:professorId", async (req, res) => {
         if (!req.isAuthenticated())
@@ -354,6 +362,14 @@ app.post("/parameter", async (req, res) => {
             periodsPerDay: req.user.periodsPerDay
         });
     });
+    app.get("/groupForm", (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        return res.render("groupForm", {
+            numberOfDays: req.user.numberOfDays,
+            periodsPerDay: req.user.periodsPerDay
+        });
+    });
     app.post("/group", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");
@@ -373,7 +389,7 @@ app.post("/parameter", async (req, res) => {
                 }
             }
         });
-        return res.redirect("/group");
+        return res.redirect("/groupForm");
     });
     app.get("/deleteGroup/:groupId", async (req, res) => {
         if (!req.isAuthenticated())
@@ -417,8 +433,8 @@ app.post("/parameter", async (req, res) => {
         const group = req.user.groups.find(group => group._id == req.params.groupId);
         res.render("editGroup", {
             group: group,
-            numberOfDays : req.user.numberOfDays,
-            periodsPerDay : req.user.periodsPerDay
+            numberOfDays: req.user.numberOfDays,
+            periodsPerDay: req.user.periodsPerDay
         });
     });
     app.post("/editGroup/:groupId", async (req, res) => {
@@ -428,17 +444,17 @@ app.post("/parameter", async (req, res) => {
             if (req.body["periodTaken" + String(loopitrt)] === "on")
                 unAvialability.push(loopitrt);
         await User.updateOne({
-            _id: req.user._id ,
-            "groups._id" : req.params.groupId
+            _id: req.user._id,
+            "groups._id": req.params.groupId
         }, {
             $set: {
                 "groups.$": {
                     groupName: req.body.groupName,
                     groupQuantity: req.body.groupQuantity,
                     unAvialability: unAvialability,
-                    periodsAttended : group.periodsAttended,
+                    periodsAttended: group.periodsAttended,
                     coursesTaken: group.coursesTaken,
-                    _id : group._id
+                    _id: group._id
                 }
             }
         });
@@ -452,6 +468,14 @@ app.post("/parameter", async (req, res) => {
             return res.redirect("/login");
         res.render("getRoom", {
             rooms: req.user.rooms,
+            numberOfDays: req.user.numberOfDays,
+            periodsPerDay: req.user.periodsPerDay
+        });
+    });
+    app.get("/roomForm", (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        return res.render("roomForm", {
             numberOfDays: req.user.numberOfDays,
             periodsPerDay: req.user.periodsPerDay
         });
@@ -475,7 +499,7 @@ app.post("/parameter", async (req, res) => {
                 }
             }
         });
-        return res.redirect("/room");
+        return res.redirect("/roomForm");
     });
     app.get("/deleteroom/:roomId", async (req, res) => {
         if (!req.isAuthenticated())
@@ -523,7 +547,13 @@ app.post("/parameter", async (req, res) => {
             });
         }
         res.render("getCourse", {
-            courseDisplay: courseDisplay,
+            courseDisplay: courseDisplay
+        });
+    });
+    app.get("/courseForm", (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        return res.render("courseForm", {
             groups: req.user.groups,
             profs: req.user.professors
         });
@@ -596,7 +626,7 @@ app.post("/parameter", async (req, res) => {
         await promiseTwo;
         await promiseThree;
         if (numberOfLectures == 0 && numberOfTutorials == 0 && numberOfLabs == 0)
-            res.redirect("/course");
+            res.redirect("/courseForm");
         else
             res.redirect("/courseTemplate/" + String(thisCourseId) + "/?numberOfLectures=" + numberOfLectures + "&numberOfTutorials=" + numberOfTutorials + "&numberOfLabs=" + numberOfLabs);
     });
@@ -760,7 +790,7 @@ app.post("/parameter", async (req, res) => {
         await promiseOne;
         await promiseTwo;
         await promiseThree;
-        res.redirect("/course");
+        res.redirect("/courseForm");
     });
 
     // app.get("/editCourse/:courseId", async (req, res) => {
@@ -816,10 +846,7 @@ app.post("/parameter", async (req, res) => {
         if (taughtByIds.length == 0 || taughtToIds.length == 0)
             return res.redirect("/deleteCourse/" + req.params.courseId);
 
-        let periodDisplay = new Array(0),
-            taughtBy = new Array(0),
-            taughtTo = new Array(0),
-            rooms = req.user.rooms;
+        let periodDisplay = new Array(0);
 
         const {
             numberOfDays,
@@ -863,12 +890,33 @@ app.post("/parameter", async (req, res) => {
 
             periodDisplay.push(periodDisplayObject);
         }
+        res.render("getPeriod", {
+            periods: periodDisplay
+        });
+    });
+    app.get("/periodForm/:courseId", (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const {
+            taughtBy: taughtByIds,
+            taughtTo: taughtToIds
+        } = req.user.courses.find(course => String(course._id) == req.params.courseId);
+        if (taughtByIds.length == 0 || taughtToIds.length == 0)
+            return res.redirect("/deleteCourse/" + req.params.courseId);
+
+        let taughtBy = new Array(0),
+            taughtTo = new Array(0),
+            rooms = req.user.rooms;
+
+        const {
+            numberOfDays,
+            periodsPerDay
+        } = req.user;
         for (const profId of taughtByIds)
             taughtBy.push(req.user.professors.find(prof => String(prof._id) == profId));
         for (const groupId of taughtToIds)
             taughtTo.push(req.user.groups.find(prof => String(prof._id) == groupId));
-        res.render("getPeriod", {
-            periods: periodDisplay,
+        res.render("periodForm", {
             taughtBy: taughtBy,
             taughtTo: taughtTo,
             rooms: rooms,
@@ -877,7 +925,6 @@ app.post("/parameter", async (req, res) => {
             courseId: (req.params.courseId)
         });
     });
-
     app.post("/addPeriod", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");
@@ -885,7 +932,7 @@ app.post("/parameter", async (req, res) => {
         const {
             courseId
         } = req.body;
-        res.redirect("/period/" + String(courseId));
+        res.redirect("/periodForm/" + String(courseId));
     });
 
     app.get("/deletePeriod/:periodId", async (req, res) => {
@@ -915,17 +962,13 @@ app.post("/parameter", async (req, res) => {
             setTimeout(() => childProcess.send({
                 "user": CircularJSON.stringify(req.user),
                 "io": CircularJSON.stringify(req.app.get('socketio'))
-            }), 3000);
+            }), 1500);
 
 
             childProcess.on("message", async message => {
                 if (message.case == "emit")
                     io.emit("message", message.emit);
                 if (message.case == "schedule") {
-                    io.emit("message", {
-                        case: "message",
-                        message: "schedule complete.Redirecting you shotly"
-                    });
                     io.emit("message", {
                         case: "complete"
                     });

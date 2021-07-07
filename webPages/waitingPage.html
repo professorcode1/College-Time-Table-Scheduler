@@ -61,7 +61,8 @@
     crossorigin="anonymous"></script>
 <script>
     const socket = io();
-    var numberOfCanva = 1;
+    const neonGreen = "#39FF14";
+    const neonOrange =  "#FF6700"
     //case can be message,warning,abort,complete
     socket.on("message", message => {
         switch (message.case) {
@@ -70,6 +71,7 @@
                 break;
             case "Initalisation_Success":
                 Initalisation_Success(message.message);
+                window.scrollTo(0, document.body.scrollHeight);
                 break;
             case "warning":
                 warning(message.message);
@@ -113,7 +115,7 @@
     function updateCounters(params) {
         document.getElementById("generationCounter").innerHTML = params.generation;
         document.getElementById("conflictCounter").innerHTML = params.conflicts;
-        window.scrollTo(0, document.body.scrollHeight);
+        //window.scrollTo(0, document.body.scrollHeight);
     }
     function abort(message) {
         var ul = document.getElementById("list");
@@ -161,10 +163,10 @@
         var ul = document.getElementById("list");
         var li = document.createElement("li");
         var greenPart = document.createElement("span");
-        greenPart.setAttribute("style", "color:rgb(0,255,122)");
+        greenPart.setAttribute("style", "color:" + neonGreen);
         greenPart.appendChild(document.createTextNode(message.substr(0, 12)));
         var orangePart = document.createElement("span");
-        orangePart.setAttribute("style", "color:#b36200");
+        orangePart.setAttribute("style", "color:" + neonOrange);
         orangePart.appendChild(document.createTextNode(message.substr(14, message.length - 1)));
         li.appendChild(greenPart);
         li.appendChild(document.createTextNode("::"));

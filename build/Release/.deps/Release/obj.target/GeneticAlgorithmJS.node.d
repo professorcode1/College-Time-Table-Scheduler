@@ -1,1 +1,0 @@
-cmd_Release/obj.target/GeneticAlgorithmJS.node := g++ -o Release/obj.target/GeneticAlgorithmJS.node -shared -pthread -rdynamic -m64  -Wl,-soname=GeneticAlgorithmJS.node -Wl,--start-group Release/obj.target/GeneticAlgorithmJS/cppSrc/cpp.o Release/obj.target/node_modules/node-addon-api/nothing.a -Wl,--end-group 

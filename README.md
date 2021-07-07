@@ -11,19 +11,16 @@ This the software engineering project made by me as the semester 4 engineering p
 To use this, follow the below steps.
 
 - Git clone this repo
-- delete the build folder in the project(optional, however once you delete this folder the existence of this folder can be used to check if the build command has worked properly, as if it has the build folder will reappear)
 - Make sure you have node installed
 - Make sure you have Python 3.6(or above),make and GCC installled(for unix/linux)
 - for any other OS refer here to know the dependencies https://www.npmjs.com/package/node-gyp
 - open the terminal in the folder of the project
-- run `npm install -g node-gyp` to get the gyp compiler
-- run `npm install node-addon-api` 
-- run `node-gyp configure` in terminal to configure it to your machine
-- run `npm install` to get all the node modules as well as generate the build files
-- Generating the build files are the most troublesome. If node-gyp is giving you trouble try using cmake.js. Just get the build folder successfully without errors.
+- run `npm install -g node-gyp` to get the gyp compiler 
+- run `npm install` to get all the node modules as well as generate the build files.(a folder by the name of build will also appear along with the node_modules folder)
+- Generating the build files are the most troublesome. If node-gyp is giving you trouble try using cmake.js.(perhaps it wan't you to use `node-gyp configure` first) Just get the build folder successfully without errors.
 - cut and paste this build folder into the node_modules folder
 - have a mongod server on your local machine up and running
-- replace the string `"mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"` on lines 41 and 52 with `"mongodb://localhost:27017/collegeScheduler"`
+- replace the string `"mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"` on lines 41 and 52 in app.js with `"mongodb://localhost:27017/collegeScheduler"`
 - run `node app.js` to run the application
 - open any browser and goto `localhost:3000` to use the application.
 
@@ -62,7 +59,7 @@ To actually generate the schedule the following algorithm is followed
 - For each professor an edge in initalised b/w all the periods taught by the professor
 - For each group, an edge is initalised b/w all the periods attended by the group
 - For each room an edge is initalised if the period takes place in that room.
-- The number b/w \[1 , number of day * number of periods\]. So say you the university operates for 8 hours and from monday to friday then for each number in the set {1,5 * 8} = {1,40} a node is initalised.
+- The number b/w \[1 , number of day * number of periods\] also have a unique node created corresponding to them. So say you the university operates for 8 hours and from monday to friday then for each number in the set {1,5 * 8} = {1,40} a node is initalised.
 - For each set time an edge b/w all other times and the corresponding period is intialised. So if set-time is tuesday hour 5 for period p, then node 1 * 8 + 5 = node 13, then p will have an edge initalised for all nodes in {1,40} except 13.
 - For each ban time the node b/w the time and the corresponding period is intialised. So if ban-time is friday hour 2 for period p, then node 4 * 8 + 5 = node 37 and p have an edge intialised.
 - One last contraint is applied. The manufacturing lab is 3 hours long, which means that it cannot be started at periods 7,8 as this would mean that a part of the period will take place the next day. To account for this fact as well, edges are drawn b/w such times and periods which go over one hour.

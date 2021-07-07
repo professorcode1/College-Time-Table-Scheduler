@@ -52,6 +52,7 @@ Cpp::Cpp(const Napi::CallbackInfo& info) : ObjectWrap(info) {
     genSinceImporvment = 0;
     leastConflictSoFar = this->conflicts(this->next_generation.front());
     CppNativeBestSoFar = next_generation.front();
+    numberOfResets = 0;
     cout<<"Construction complete"<<endl;
 }
 

@@ -1,1 +1,0 @@
-cmd_Release/GeneticAlgorithmJS.node := ln -f "Release/obj.target/GeneticAlgorithmJS.node" "Release/GeneticAlgorithmJS.node" 2>/dev/null || (rm -rf "Release/GeneticAlgorithmJS.node" && cp -af "Release/obj.target/GeneticAlgorithmJS.node" "Release/GeneticAlgorithmJS.node")

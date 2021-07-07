@@ -3,7 +3,6 @@
 This the software engineering project made by me as the semester 4 engineering project. Its solves the common university problem of having to perfrom tedious scheduling.
 
 <img alt="preview" src="ImagesOfProject/Waiting-.png" width="90%">
-<img alt="preview" src="ImagesOfProject/Waiting-1.png" width="90%">
 <img alt="preview" src="ImagesOfProject/Homepage.png" width="90%">
 <img alt="preview" src="ImagesOfProject/Courses.png" width="90%">
 <img alt="preview" src="ImagesOfProject/Scheduler.png" width="90%">

@@ -21,6 +21,7 @@ To use this, follow the below steps.
 - run `npm install node-addon-api` 
 - run `node-gyp configure` in terminal to configure it to your machine
 - run `npm install` to get all the node modules as well as generate the build files
+- Generating the build files are the most troublesome. If node-gyp is giving you trouble try using cmake.js. Just get the build folder successfully without errors.
 - cut and paste this build folder into the node_modules folder
 - have a mongod server on your local machine up and running
 - replace the string `"mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"` on lines 41 and 52 with `"mongodb://localhost:27017/collegeScheduler"`

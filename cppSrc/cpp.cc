@@ -60,7 +60,7 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
     
     Napi::Env env = info.Env();
     printf("Genetic algorithm engaged\n Generations since improvment = %d \n",genSinceImporvment);
-    if(genSinceImporvment > 100)
+    if(genSinceImporvment > genSinceImporvmentToleranceValue)
     {
         for (int i = 0; i < population_size; i++)
             this->next_generation.at(i) = this->random_coloring();
@@ -69,7 +69,7 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
         leastConflictSoFar = this->conflicts(this->next_generation.front());
         cout<<"Restarting algorithm"<<endl;
         numberOfResets++;
-        numberOfResetsToleranceValue += 100;
+        genSinceImporvmentToleranceValue += 100;
         if(numberOfResets >= numberOfResetsToleranceValue)
             return Napi::Number::New(env,1);
     }

@@ -69,6 +69,7 @@ Napi::Value Cpp::genetic_algorithm_for_graph_coloring(const Napi::CallbackInfo& 
         leastConflictSoFar = this->conflicts(this->next_generation.front());
         cout<<"Restarting algorithm"<<endl;
         numberOfResets++;
+        numberOfResetsToleranceValue += 100;
         if(numberOfResets >= numberOfResetsToleranceValue)
             return Napi::Number::New(env,1);
     }

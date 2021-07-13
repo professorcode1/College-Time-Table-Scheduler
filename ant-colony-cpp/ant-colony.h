@@ -9,6 +9,9 @@
 #include <vector>
 #include <iterator>
 #include <ostream>
+#include <utility>
+#include <typeinfo>
+#include <exception>
 
 using namespace emscripten;
 
@@ -25,9 +28,12 @@ void add_ban_time(std::string time);
 
 private:
   int period_id, period_len_value, period_freq_value;
+  //periods with the same freq_val, but different len_val are siblings and need to happen consequtively
+  //periods without the same freq_val are cousins.   
   lecture *parent_lecture;
   std::string period_name;
-  std::set<int> vaiable_colors;
+  std::set<int> viable_colors;
+  std::map<int,int> ants; //maps each viable_color to the number of ant of that color sitting on the period
   friend class ant_colony;
 };
 std::map<int, period *> period::id_to_period_lookup;
@@ -54,10 +60,15 @@ public:
                    int lecture_frequency);
   void add_edge(std::string node_One, std::string node_Two);
   void print_all_periods();
+  void initiate_coloring();
 
 private:
   int periodsPerDay, numberOfDays, numberOfPeriods, numberOfLectures,
       period_id_generator, lecture_id_generator;
   std::vector<lecture *> lectures;
   std::map<period *, std::set<period *>> edges;
+  void create_ants();
+  void dsatur_color(std::map<period* , int> &coloring);
+  bool coloring_valid(std::map<period* , int> &coloring);
+  int conflicts(std::map<period* , int> &coloring);
 };

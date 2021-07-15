@@ -264,14 +264,14 @@
             message: "Initialisation::Complete"
         });
         console.log("Initialisation Complete");
-
         //Calling the ant-colony algorithm in web-assembly complied down from c++
         {
             var instance = new Module.ant_colony(periodsPerDay, numberOfDays, periods.length, schedulerGraph._vertices.length - (periodsPerDay * numberOfDays));
             for (const period of periods)
                 instance.add_lecture(String(period._id), period.periodLength, period.periodFrequency);
             for (const node of schedulerGraph._vertices){
-                console.log(node);
+                if(node.length > 24)
+                    console.log(node,periods.find(period=>String(period._id) == String(node).substr(0,24)).periodName);
                 console.log(schedulerGraph._graph[node]);
                 for (const nodeNeighbor in schedulerGraph._graph[node]) {
                     instance.add_edge(String(node), String(nodeNeighbor));

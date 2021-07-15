@@ -91,6 +91,7 @@ private:
   int conflicts(std::map<period* , int> &coloring);
   period* node_to_be_recolored(std::map<period* , int> &coloring);
   void fill_M(M_class &M,const std::map<std::pair<period*,int>,int > &tabu_table,period* X,int i);
+  void node_to_be_recolored(std::set<period*> &A,std::map<period* , int> &coloring);
   friend class M_class;
 };
 
@@ -103,6 +104,7 @@ class m{
   long adv,disAdv;
   double Trail;
   friend class M_class;
+  friend class ant_colony;
 };
 
 class M_class{

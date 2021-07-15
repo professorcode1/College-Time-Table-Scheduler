@@ -163,19 +163,168 @@ void ant_colony::initiate_coloring(){
     int conflicts{least_conflicts};
     std::map<period* , int> best_coloring(coloring);
     update_js(iterations,least_conflicts);
-
+    int haha = 10;
     //STEP 6
     while(iterations_without_improvment < MaxIter && least_conflicts > 0){
-        //a,b and c (in the implimentation they happen simultaneously )
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t starting"<<std::endl;
+        //a,b and c (here they happen simultaneously )
         period* X = node_to_be_recolored(coloring);
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t X \t"<<X->period_name<<std::endl;
         int i =  coloring.at(X);
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t i"<<i<<std::endl;
         int N_i = X->ants.at(i);
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t N_i"<<N_i<<std::endl;
         M_class M; //y , j
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t calling fill_M"<<std::endl;
         fill_M(M,tabu_table,X,i);
+        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t sorting M"<<std::endl;
         M.sort();
 
+        std::cout<<"initiate_coloring\t::\td and e\t::\t starting"<<std::endl;
         //d and e
+        int p =  X->ants.at(i);
+        std::set<int> C_x;
+        std::map<period*,std::set<int>> P_x; 
+        //the above three are used for trail update 
+        for(int move_counter = 0 ; X->ants.at(i) ; move_counter++){
+            m* move = M.move_list.at(move_counter);
+            period* y = move->y;
+            int j = move->color;
+
+            C_x.insert(j);
+            P_x[y].insert(j);
+
+            int no_of_ant_exchange = std::min(X->ants.at(i),y->ants.at(j));
+            X->ants.at(i) -= no_of_ant_exchange;
+            X->ants.at(j) += no_of_ant_exchange;
+            for(period* X_adjacent : edges.at(X)){
+                neighbor_ant_count.at(std::make_pair(X_adjacent, i)) -= no_of_ant_exchange;
+                neighbor_ant_count.at(std::make_pair(X_adjacent, j)) += no_of_ant_exchange;
+            }
+            y->ants.at(i) += no_of_ant_exchange;
+            y->ants.at(j) -= no_of_ant_exchange;
+            for(period* y_adjacent : edges.at(y)){
+                neighbor_ant_count.at(std::make_pair(y_adjacent, i)) += no_of_ant_exchange;
+                neighbor_ant_count.at(std::make_pair(y_adjacent, j)) -= no_of_ant_exchange;
+            }
+        }
+
+        //for some reason the paper says f,g need to happen here
+        //that's counter intuitive
+        //also my own experiments show it doesn't work
+
+        std::cout<<"initiate_coloring\t::\th\t::\t starting"<<std::endl;
+        //h creating A
+        {
+            std::set<period*> A;
+            //conflicting vertices at t-1
+            node_to_be_recolored(A,coloring);
+            //vertices involved in a move
+            for(std::map<period*,std::set<int>>::iterator itrt = P_x.begin() ; itrt != P_x.end() ; itrt++)
+                A.insert(period::id_to_period_lookup.at(itrt->first->period_id - itrt->first->period_len_value));
+
+            for(period* node : A){
+                int color = coloring.at(node);
+                coloring.at(node) = -1;
+                for(auto neighbor_node : edges.at(node)){
+                    hlpr_data_structure_one.at(neighbor_node)--;
+                    neighbor_color_counter[neighbor_node->period_id][color]--;
+                }
+            }
+
+            for(period* node : A)
+                hlpr_data_structure_zero.insert(std::make_pair(std::make_pair(hlpr_data_structure_one.at(node),edges.at(node).size()),node));
+        }
+
+        std::cout<<"initiate_coloring\t::\ti\t::\t starting"<<std::endl;
+        //i 
+        dsatur_color(coloring, hlpr_data_structure_zero, hlpr_data_structure_one,neighbor_color_counter);
+        conflicts = this->conflicts(coloring);
+
+        std::cout<<"initiate_coloring\t::\tf\t::\t starting"<<std::endl;
+        //f pheramon update
+        {
+            double maxTrail = -DBL_MAX, minTrail = DBL_MAX;
+            std::pair<double,double> rho__deltaT;
+            double Delta;
+            if(conflicts > least_conflicts)
+                Delta = 0.1;
+            else if(conflicts == least_conflicts)
+                Delta = 0.2;
+            else
+                Delta = 0.4;
+            for(std::map<int,period*>::iterator it = period::id_to_period_lookup.begin() ; it != period::id_to_period_lookup.end() ; it++){
+                for(const int color : it->second->viable_colors){
+                    if(it->second == X){
+                        if(C_x.find(color) != C_x.end())
+                            rho__deltaT = std::make_pair(0.9,2*Delta);
+                        else if (color == i)
+                            rho__deltaT = std::make_pair(0.8, 0);
+                        else
+                            rho__deltaT = std::make_pair(0.9, 0);
+                    }else if (P_x.find(it->second) != P_x.end()){
+                        if(P_x.at(it->second).find(color) != P_x.at(it->second).end())
+                            rho__deltaT = std::make_pair(0.9, 0);
+                        else if(color == i)
+                            rho__deltaT = std::make_pair(0.9, Delta);
+                        else
+                            rho__deltaT = std::make_pair(0.9, Delta/2);
+                    }else
+                        rho__deltaT = std::make_pair(0.99,0);
+                    
+                    it->second->trails.at(color) = rho__deltaT.first * it->second->trails.at(color) + rho__deltaT.second;
+
+                    if(it->second->trails.at(color) < minTrail)
+                        minTrail = it->second->trails.at(color);
+                    if(it->second->trails.at(color) > maxTrail)
+                        maxTrail = it->second->trails.at(color);
+                }
+            }
+            if(minTrail != maxTrail)
+                for(std::map<int,period*>::iterator it = period::id_to_period_lookup.begin() ; it != period::id_to_period_lookup.end() ; it++)
+                    for(const int color : it->second->viable_colors)
+                        it->second->trails.at(color) = (it->second->trails.at(color) - minTrail) / (maxTrail - minTrail); 
+
+            std::cout<<maxTrail <<"\t"<<minTrail<<std::endl;
+
+        }
+
+        //g tabu tenure
+        {
+            int tab = random_number(0, 10) + floor(0.6f * conflicts);
+            std::vector<std::map<std::pair<period*,int>,int>::iterator> tabu_complete;
+            for(std::map<std::pair<period*,int>,int>::iterator itrt = tabu_table.begin() ; itrt != tabu_table.end() ; itrt++){
+                itrt->second--;
+                if(itrt->second <= 0)
+                    tabu_complete.push_back(itrt);
+            }
+            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete filled"<<std::endl;
+            
+            for(std::map<std::pair<period*,int>,int>::iterator itrt : tabu_complete)
+                tabu_table.erase(itrt);
+            
+            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete emptied"<<std::endl;
+            
+            tabu_table.insert(std::make_pair(std::make_pair(X,i),tab));
+            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\tX and i inserted"<<std::endl;
+        }
+
+        //j
+        if(conflicts < least_conflicts)
+        {
+            best_coloring = coloring;
+            iterations_without_improvment = -1;
+            least_conflicts = conflicts;
+        }
+
+        //k
+        iterations_without_improvment++;
+        iterations++;
+
+        if(!haha--)
+            std::cout<<"SOYBOI\t"<<conflicts<<std::endl;
     }
+    std::cout<<"Coloring performed successfully"<<std::endl;
 }
 void M_class::sort(){
     double maxGr{-DBL_MAX},minGr{DBL_MAX};
@@ -300,6 +449,16 @@ void update_js(int iterations,int conflicts){
     const char* javascript_update_C_str = javascript_update_str.c_str();
     emscripten_run_script(javascript_update_C_str);
 }
+void ant_colony::node_to_be_recolored(std::set<period*> &A,std::map<period* , int> &coloring){
+    for(std::map<period*,std::set<period*> >::iterator itrt = edges.begin() ; itrt != edges.end() ; itrt++){
+        period* node = itrt->first;
+        for(period* neighbor_node:itrt->second)
+            if(coloring.at(node) == coloring.at(neighbor_node)){
+                A.insert(period::id_to_period_lookup.at(node->period_id - node->period_len_value));
+                break;
+            }
+    }
+}
 period* ant_colony::node_to_be_recolored(std::map<period* , int> &coloring){
     std::set<period*> conflicted_nodes;
     for(std::map<period*,std::set<period*> >::iterator itrt = edges.begin() ; itrt != edges.end() ; itrt++){
@@ -326,11 +485,14 @@ int ant_colony::conflicts(std::map<period* , int> &coloring){
     return conflict_counter/2;
 }
 void ant_colony::dsatur_color(std::map<period* , int> &coloring,std::set<std::pair<std::pair<int,int>,period* > > hlpr_data_structure_zero,std::map<period*,int> hlpr_data_structure_one,int** neighbor_color_counter){
+    int x = 500;
     while(!hlpr_data_structure_zero.empty()){
-        std::cout<<"CURRENT COLORING SIZE\t"<<coloring.size()<<std::endl;
+        if(!x--)
+            return ;
         const period* node = hlpr_data_structure_zero.rbegin()->second;
         if(node->period_len_value != 0)
             node = period::id_to_period_lookup.at(node->period_id - node->period_len_value);
+        std::cout<<"dsatur_color\t::\t"<<node->period_name<<std::endl;
         //makes sure the period we dealing with has a len_val = 0 i.e. it is a starting period 
         int best_color = *node->viable_colors.begin();
         int min_conflicts = neighbor_color_counter[node->period_id][best_color];

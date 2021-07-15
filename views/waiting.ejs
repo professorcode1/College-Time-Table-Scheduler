@@ -75,6 +75,7 @@
 <script src="graph/lib/graph.js"></script>
 <script defer>
     ScheduleGenerator = (user) => {
+        console.time("haha");
         const {
             numberOfDays,
             periodsPerDay,
@@ -280,6 +281,7 @@
             instance.print_all_periods();
             console.log("all done");
             instance.initiate_coloring();
+            console.timeEnd("haha");
         }
     };
     print_message = (message) => {

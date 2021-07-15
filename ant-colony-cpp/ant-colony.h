@@ -86,7 +86,7 @@ private:
   std::map<std::pair<period*,int>,int> neighbor_ant_count; //given a period and color, 
   //it tells sum of all ants of that color over adjacent nodes 
   void create_ants();
-  void dsatur_color(std::map<period* , int> &coloring,std::set<std::pair<std::pair<int,int>,period* > > hlpr_data_structure_zero,std::map<period*,int> hlpr_data_structure_one,int** neighbor_color_counter);
+  void dsatur_color(std::map<period* , int> &coloring,int** neighbor_color_counter);
   bool coloring_valid(std::map<period* , int> &coloring);
   int conflicts(std::map<period* , int> &coloring);
   period* node_to_be_recolored(std::map<period* , int> &coloring);

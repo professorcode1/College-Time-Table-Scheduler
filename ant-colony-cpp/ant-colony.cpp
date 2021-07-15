@@ -8,7 +8,7 @@
 int random_number(int left, int right){
     //returns a number b/w [left,right)
     if(left > right){
-        std::cout<<"Invaid input TO random_number_function\t"<<left<<"\t"<<right<<std::endl;
+        //std::cout<<"Invaid input TO random_number_function\t"<<left<<"\t"<<right<<std::endl;
         return left;
     }
     else if(left == right)
@@ -131,18 +131,7 @@ void ant_colony::initiate_coloring(){
     std::map<period* , int> coloring;
     for(auto int_and_period : period::id_to_period_lookup)
         coloring.insert(std::make_pair(int_and_period.second,-1));
-    //hlpr_ds_0 acts as A
-    //left.left will be saturation degree,left.right will be degree , and right will period pointer 
-    //so the last element of this data structure will always be the node to be taken out
-    std::set<std::pair<std::pair<int,int>,period* > > hlpr_data_structure_zero;
-    //this will map each period to its saturation degree. A periods degree can be calculated in O(1) anyways
-    //so this will help update hlpr_data_structure_zero in 2logn operation.Otherwise it will take O(n)
-    std::map<period*,int> hlpr_data_structure_one;
-    //initalising A = V
-    for(std::map<int,period*>::iterator itrt = period::id_to_period_lookup.begin() ; itrt != period::id_to_period_lookup.end() ; itrt++){
-        hlpr_data_structure_zero.insert(std::make_pair(std::make_pair(0,edges.at(itrt->second).size()),itrt->second));
-        hlpr_data_structure_one.insert(std::make_pair(itrt->second,0));
-    }
+        
     int** neighbor_color_counter = new int*[numberOfPeriods];
     for(int i=0; i<numberOfPeriods ; i++)
         neighbor_color_counter[i] =new int[periodsPerDay*numberOfDays];
@@ -150,7 +139,7 @@ void ant_colony::initiate_coloring(){
         for(int j=0 ; j < periodsPerDay*numberOfDays ; j++)
             neighbor_color_counter[i][j] = 0;
     
-    dsatur_color(coloring,hlpr_data_structure_zero,hlpr_data_structure_one,neighbor_color_counter);
+    dsatur_color(coloring,neighbor_color_counter);
     if(coloring_valid(coloring))
         std::cout<<"COLORING VALID"<<std::endl;
     else{
@@ -166,21 +155,21 @@ void ant_colony::initiate_coloring(){
     int haha = 10;
     //STEP 6
     while(iterations_without_improvment < MaxIter && least_conflicts > 0){
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t starting"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t starting"<<std::endl;
         //a,b and c (here they happen simultaneously )
         period* X = node_to_be_recolored(coloring);
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t X \t"<<X->period_name<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t X \t"<<X->period_name<<std::endl;
         int i =  coloring.at(X);
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t i"<<i<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t i"<<i<<std::endl;
         int N_i = X->ants.at(i);
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t N_i"<<N_i<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t N_i"<<N_i<<std::endl;
         M_class M; //y , j
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t calling fill_M"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t calling fill_M"<<std::endl;
         fill_M(M,tabu_table,X,i);
-        std::cout<<"initiate_coloring\t::\ta and b and c\t::\t sorting M"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t sorting M"<<std::endl;
         M.sort();
 
-        std::cout<<"initiate_coloring\t::\td and e\t::\t starting"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\td and e\t::\t starting"<<std::endl;
         //d and e
         int p =  X->ants.at(i);
         std::set<int> C_x;
@@ -213,7 +202,7 @@ void ant_colony::initiate_coloring(){
         //that's counter intuitive
         //also my own experiments show it doesn't work
 
-        std::cout<<"initiate_coloring\t::\th\t::\t starting"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\th\t::\t starting"<<std::endl;
         //h creating A
         {
             std::set<period*> A;
@@ -227,21 +216,17 @@ void ant_colony::initiate_coloring(){
                 int color = coloring.at(node);
                 coloring.at(node) = -1;
                 for(auto neighbor_node : edges.at(node)){
-                    hlpr_data_structure_one.at(neighbor_node)--;
                     neighbor_color_counter[neighbor_node->period_id][color]--;
                 }
             }
-
-            for(period* node : A)
-                hlpr_data_structure_zero.insert(std::make_pair(std::make_pair(hlpr_data_structure_one.at(node),edges.at(node).size()),node));
         }
 
-        std::cout<<"initiate_coloring\t::\ti\t::\t starting"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\ti\t::\t starting"<<std::endl;
         //i 
-        dsatur_color(coloring, hlpr_data_structure_zero, hlpr_data_structure_one,neighbor_color_counter);
+        dsatur_color(coloring,neighbor_color_counter);
         conflicts = this->conflicts(coloring);
 
-        std::cout<<"initiate_coloring\t::\tf\t::\t starting"<<std::endl;
+        //std::cout<<"initiate_coloring\t::\tf\t::\t starting"<<std::endl;
         //f pheramon update
         {
             double maxTrail = -DBL_MAX, minTrail = DBL_MAX;
@@ -285,7 +270,7 @@ void ant_colony::initiate_coloring(){
                     for(const int color : it->second->viable_colors)
                         it->second->trails.at(color) = (it->second->trails.at(color) - minTrail) / (maxTrail - minTrail); 
 
-            std::cout<<maxTrail <<"\t"<<minTrail<<std::endl;
+            //std::cout<<maxTrail <<"\t"<<minTrail<<std::endl;
 
         }
 
@@ -298,15 +283,15 @@ void ant_colony::initiate_coloring(){
                 if(itrt->second <= 0)
                     tabu_complete.push_back(itrt);
             }
-            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete filled"<<std::endl;
+            //std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete filled"<<std::endl;
             
             for(std::map<std::pair<period*,int>,int>::iterator itrt : tabu_complete)
                 tabu_table.erase(itrt);
             
-            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete emptied"<<std::endl;
+            //std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\ttabu_complete emptied"<<std::endl;
             
             tabu_table.insert(std::make_pair(std::make_pair(X,i),tab));
-            std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\tX and i inserted"<<std::endl;
+            //std::cout<<"initiate_coloring\t::\tg tabu tenure\t::\tX and i inserted"<<std::endl;
         }
 
         //j
@@ -320,11 +305,14 @@ void ant_colony::initiate_coloring(){
         //k
         iterations_without_improvment++;
         iterations++;
-
-        if(!haha--)
-            std::cout<<"SOYBOI\t"<<conflicts<<std::endl;
     }
     std::cout<<"Coloring performed successfully"<<std::endl;
+    if(coloring_valid(coloring))
+        std::cout<<"COLORING VALID"<<std::endl;
+    else{
+        std::cout<<"COLORING INVALID"<<std::endl;
+        return;
+    }
 }
 void M_class::sort(){
     double maxGr{-DBL_MAX},minGr{DBL_MAX};
@@ -354,8 +342,8 @@ void M_class::sort(){
         double right_fitness = alpha * normalised_GR_r + beta * nrml_trail_r;
         return left_fitness > right_fitness; 
     });
-    std::cout<<"maxAdvVal "<<maxAdvVal << "\tminAdvVal "<<minAdvVal<<"\tminDisAdvVal "<<minDisAdvVal<<"\tmaxDisAdvVal "<<maxDisAdvVal<<std::endl;
-    std::cout<<"maxGr " << maxGr << "\tminGr "<<minGr<<"\tminTrailVal "<<minTrailVal<<"\tmaxTrailVal "<<maxTrailVal<<std::endl;
+    //std::cout<<"maxAdvVal "<<maxAdvVal << "\tminAdvVal "<<minAdvVal<<"\tminDisAdvVal "<<minDisAdvVal<<"\tmaxDisAdvVal "<<maxDisAdvVal<<std::endl;
+    //std::cout<<"maxGr " << maxGr << "\tminGr "<<minGr<<"\tminTrailVal "<<minTrailVal<<"\tmaxTrailVal "<<maxTrailVal<<std::endl;
     for(int i=0 ; i<move_list.size() ; i++)
     {
         m* left = move_list.at(i);
@@ -366,8 +354,58 @@ void M_class::sort(){
         if(isnan(nrml_trail_l))
             nrml_trail_l = 1;
         double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
-        std::cout<<"normalised_Adv_l "<<normalised_Adv_l<<"\tnormalised_DisAdv_l "<<normalised_DisAdv_l<<"\tnormalised_GR_l "<<normalised_GR_l<<"\tnrml_trail_l "<<nrml_trail_l<<std::endl;
-        std::cout<<i<<"\t"<<left_fitness<<std::endl;
+        //std::cout<<"normalised_Adv_l "<<normalised_Adv_l<<"\tnormalised_DisAdv_l "<<normalised_DisAdv_l<<"\tnormalised_GR_l "<<normalised_GR_l<<"\tnrml_trail_l "<<nrml_trail_l<<std::endl;
+        //std::cout<<i<<"\t"<<left_fitness<<std::endl;
+    }
+}
+void ant_colony::dsatur_color(std::map<period* , int> &coloring,int** neighbor_color_counter){
+    std::map<period*,int> saturation_counter; //at any given tells the saturation of any node
+    std::set<period*> A;
+    for(std::map<period* , int>::iterator itrt = coloring.begin() ; itrt != coloring.end() ; itrt++)
+        saturation_counter.insert(std::make_pair(itrt->first, 0));
+    for(std::map<period* , int>::iterator itrt = coloring.begin() ; itrt != coloring.end() ; itrt++)
+        if(itrt->second == -1){
+            for(period* neighbor_node : edges.at(itrt->first))
+                saturation_counter.at(neighbor_node)++;
+            A.insert(period::id_to_period_lookup.at(itrt->first->period_id - itrt->first->period_len_value));
+        }
+    while(!A.empty()){
+        period* node = nullptr;
+        int saturation_degree = INT_MIN , degree = INT_MIN;
+        for(period* period_ : A){
+            if(saturation_counter.at(period_) > saturation_degree){
+                node = period_;
+                saturation_degree = saturation_counter.at(period_);
+                degree = edges.at(node).size();
+            }
+            else if(saturation_counter.at(period_) == saturation_degree && edges.at(period_).size() > edges.at(node).size()){
+                node = period_;
+                degree = edges.at(period_).size();
+            }
+        }
+        int color{-1} , no_of_ants_{INT_MIN} , conflicts{INT_MAX};
+        for(int viable_color : node->viable_colors){
+            if(node->ants.at(viable_color) > 0){
+                if(neighbor_color_counter[node->period_id][viable_color] < conflicts){
+                    conflicts = neighbor_color_counter[node->period_id][viable_color];
+                    no_of_ants_ = node->ants.at(viable_color);
+                    color = viable_color;
+                } else if(neighbor_color_counter[node->period_id][viable_color] == conflicts && node->ants.at(viable_color) > no_of_ants_){
+                    color = viable_color;
+                    no_of_ants_ = node->ants.at(viable_color);
+                }
+            }
+        }
+        for(int len = 0 ; len < node->parent_lecture->lecture_length ; len++){
+            //std::cout<<period::id_to_period_lookup.at(node->period_id + len)->period_name<<std::endl;
+            coloring.at(period::id_to_period_lookup.at(node->period_id + len)) = color + len;
+            for(period* neighbor_node : edges.at(node)){
+                saturation_counter.at(neighbor_node)++;
+                neighbor_color_counter[neighbor_node->period_id][color+len]++;
+            }
+        }
+        //std::cout<<std::endl;
+        A.erase(node);
     }
 }
 void ant_colony::fill_M(M_class &M,const std::map<std::pair<period*,int>,int > &tabu_table,period* X,int i){
@@ -483,54 +521,6 @@ int ant_colony::conflicts(std::map<period* , int> &coloring){
                 conflict_counter++;
     }
     return conflict_counter/2;
-}
-void ant_colony::dsatur_color(std::map<period* , int> &coloring,std::set<std::pair<std::pair<int,int>,period* > > hlpr_data_structure_zero,std::map<period*,int> hlpr_data_structure_one,int** neighbor_color_counter){
-    int x = 500;
-    while(!hlpr_data_structure_zero.empty()){
-        if(!x--)
-            return ;
-        const period* node = hlpr_data_structure_zero.rbegin()->second;
-        if(node->period_len_value != 0)
-            node = period::id_to_period_lookup.at(node->period_id - node->period_len_value);
-        std::cout<<"dsatur_color\t::\t"<<node->period_name<<std::endl;
-        //makes sure the period we dealing with has a len_val = 0 i.e. it is a starting period 
-        int best_color = *node->viable_colors.begin();
-        int min_conflicts = neighbor_color_counter[node->period_id][best_color];
-        bool beginning_color_ant_count_zero = node->ants.at(best_color) == 0;
-        for(std::set<int>::iterator vbl_clr_itrt = node->viable_colors.begin(); vbl_clr_itrt != node->viable_colors.end() ; vbl_clr_itrt++){
-            if(beginning_color_ant_count_zero && node->ants.at(*vbl_clr_itrt) != 0){
-                best_color = *vbl_clr_itrt;
-                min_conflicts = neighbor_color_counter[node->period_id][best_color];
-                beginning_color_ant_count_zero = false;
-                continue;
-            }
-            if(node->ants.at(*vbl_clr_itrt) != 0 && neighbor_color_counter[node->period_id][*vbl_clr_itrt] < min_conflicts){
-                best_color = *vbl_clr_itrt;
-                min_conflicts = neighbor_color_counter[node->period_id][best_color];
-            }
-        }
-        //bunch of things I need to do
-        for(int len=0 ; len < node->parent_lecture->lecture_length ; len++){
-            period* siblingNode =  period::id_to_period_lookup.at(node->period_id+len);
-            int color = best_color + len;
-            //1)Put the node and its siblings into the coloring map
-            coloring.at(siblingNode) = color;
-            for(period* neighbor_node : edges.at(siblingNode)){
-                neighbor_color_counter[neighbor_node->period_id][color]++;
-                int saturation_of_neighbor = hlpr_data_structure_one.at(neighbor_node);
-                hlpr_data_structure_one.at(neighbor_node)++;
-                if(hlpr_data_structure_zero.find(std::make_pair(std::make_pair(saturation_of_neighbor,edges.at(neighbor_node).size()),neighbor_node)) == hlpr_data_structure_zero.end())
-                    continue;
-                hlpr_data_structure_zero.erase(hlpr_data_structure_zero.find(std::make_pair(std::make_pair(saturation_of_neighbor,edges.at(neighbor_node).size()),neighbor_node)));
-                hlpr_data_structure_zero.insert(std::make_pair(std::make_pair(saturation_of_neighbor+1,edges.at(neighbor_node).size()),neighbor_node));
-            }
-        }
-        for(int len=0 ; len < node->parent_lecture->lecture_length ; len++){
-            period* siblingNode =  period::id_to_period_lookup.at(node->period_id+len);
-            hlpr_data_structure_zero.erase(std::make_pair(std::make_pair(hlpr_data_structure_one.at(siblingNode),edges.at(siblingNode).size()),siblingNode));
-            //hlpr_data_structure_one.erase(siblingNode);
-        }
-    }
 }
 void ant_colony::create_ants(){
     for(std::map<int,period*>::iterator it = period::id_to_period_lookup.begin() ; it != period::id_to_period_lookup.end() ; it++)

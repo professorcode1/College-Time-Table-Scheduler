@@ -20,14 +20,16 @@
 #include <float.h>
 using namespace emscripten;
 
-const int MaxIter{500};
-const double alpha = 1 , beta = 5;
+const int MaxIter{50};
+const long double alpha = 1 , beta = 5;
 
 
 unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 std::mt19937 generator(seed);
+std::mt19937_64 generator_64(seed);
 int random_number(int left,int right);
 class period;
+class m;
 void call_js_coloring_(const std::map<period*,int> &coloring);
 std::string numberToString(int num);
 int string_to_int(std::string time);
@@ -51,7 +53,7 @@ private:
   std::string period_name;
   std::set<int> viable_colors;
   std::map<int,int> ants; //maps each viable_color to the number of ant of that color sitting on the period
-  std::map<int,double> trails; //maps each viable_color to the pheramone left by the ant
+  std::map<int,long double> trails; //maps each viable_color to the pheramone left by the ant
   friend class ant_colony;
   friend class M_class;
 };
@@ -96,17 +98,18 @@ private:
   period* node_to_be_recolored(std::map<period* , int> &coloring);
   void fill_M(M_class &M,const std::map<std::pair<period*,int>,int > &tabu_table,period* X,int i);
   void node_to_be_recolored(std::set<period*> &A,std::map<period* , int> &coloring);
+  void choose_Nxi(m* M_choose_Nxi[],M_class M,int N__x__i);
   friend class M_class;
 };
 
 class m{
   public:
-  m(period* y,int color,long adv,long disAdv,double Trail);
+  m(period* y,int color,long adv,long disAdv,long double Trail);
   private:
   period* y;
   int color;
   long adv,disAdv;
-  double Trail;
+  long double Trail;
   friend class M_class;
   friend class ant_colony;
 };
@@ -121,7 +124,7 @@ class M_class{
   std::vector<m*> move_list;
   m *maxAdvMove,*maxDisAdvMove,*minAdvMove,*minDisAdvMove,*minTrailMove,*maxTrailMove;
   long maxAdvVal,maxDisAdvVal,minAdvVal,minDisAdvVal;
-  double minTrailVal,maxTrailVal;
+  long double minTrailVal,maxTrailVal;
   friend class ant_colony;
 };
 

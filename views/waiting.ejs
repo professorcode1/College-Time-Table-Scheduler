@@ -144,6 +144,7 @@
     function updateCounters(params) {
         document.getElementById("generationCounter").innerHTML = params.generation;
         document.getElementById("conflictCounter").innerHTML = params.conflicts;
+        document.getElementById("leastConflictCounter").innerHTML = params.leastConflicts;
         //window.scrollTo(0, document.body.scrollHeight);
     }
     function abort(message) {
@@ -180,11 +181,16 @@
         generationCounter.setAttribute("id", "generationCounter");
         var conflictCounter = document.createElement("span");
         conflictCounter.setAttribute("id", "conflictCounter");
+        var leastConflictCounter = document.createElement("span");
+        leastConflictCounter.setAttribute("id", "leastConflictCounter");
         updateCounter.appendChild(document.createTextNode("Iteration::"));
         updateCounter.appendChild(generationCounter);
         updateCounter.appendChild(document.createElement("br"));
         updateCounter.appendChild(document.createTextNode("Conflict Counter::"));
         updateCounter.appendChild(conflictCounter);
+        updateCounter.appendChild(document.createElement("br"));
+        updateCounter.appendChild(document.createTextNode("Least Conflict::"));
+        updateCounter.appendChild(leastConflictCounter);
         mainDiv.appendChild(updateCounter);
         window.scrollTo(0, document.body.scrollHeight);
     }

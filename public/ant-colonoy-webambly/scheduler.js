@@ -1,12 +1,13 @@
 importScripts("ant_colony.js");
 importScripts("../graph/lib/graph.js");
 var coloring = new Object();
-function algorithm_update(val1, val2) {
+function algorithm_update(val1, val2,val3) {
     console.log(val1, val2);
     postMessage({
         case: "algorithm_update",
         generation: val1,
-        conflicts: val2
+        conflicts: val2,
+        leastConflicts : val3
     });
 }
 function failed(){

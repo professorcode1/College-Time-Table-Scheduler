@@ -107,31 +107,31 @@ void ant_colony::print_all_periods(){
     }
 }
 void M_class::sort(){
-    double maxGr{-DBL_MAX},minGr{DBL_MAX};
+    long double maxGr{-DBL_MAX},minGr{DBL_MAX};
     for(m* move : move_list){
-        double normalised_Adv = (static_cast<double>(move->adv) - minAdvVal) / static_cast<double>(maxAdvVal - minAdvVal);
-        double normalised_DisAdv = (static_cast<double>(move->disAdv) - minDisAdvVal)/static_cast<double>(maxDisAdvVal-minDisAdvVal);
-        double Gr = normalised_Adv - normalised_DisAdv;
+        long double normalised_Adv = (static_cast<long double>(move->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
+        long double normalised_DisAdv = (static_cast<long double>(move->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
+        long double Gr = normalised_Adv - normalised_DisAdv;
         if(Gr > maxGr)
             maxGr = Gr;
         if(Gr < minGr)
             minGr = Gr;
     }
     std::sort(move_list.begin(),move_list.end(),[this,maxGr,minGr](m* left,m* right){
-        double normalised_Adv_l = (static_cast<double>(left->adv) - minAdvVal) / static_cast<double>(maxAdvVal - minAdvVal);
-        double normalised_DisAdv_l = (static_cast<double>(left->disAdv) - minDisAdvVal)/static_cast<double>(maxDisAdvVal-minDisAdvVal);
-        double normalised_Adv_r = (static_cast<double>(right->adv) - minAdvVal) / static_cast<double>(maxAdvVal - minAdvVal);
-        double normalised_DisAdv_r = (static_cast<double>(right->disAdv) - minDisAdvVal)/static_cast<double>(maxDisAdvVal-minDisAdvVal);
-        double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
-        double normalised_GR_r = (normalised_Adv_r - normalised_DisAdv_r - minGr) / (maxGr - minGr);
-        double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
+        long double normalised_Adv_l = (static_cast<long double>(left->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
+        long double normalised_DisAdv_l = (static_cast<long double>(left->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
+        long double normalised_Adv_r = (static_cast<long double>(right->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
+        long double normalised_DisAdv_r = (static_cast<long double>(right->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
+        long double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
+        long double normalised_GR_r = (normalised_Adv_r - normalised_DisAdv_r - minGr) / (maxGr - minGr);
+        long double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
         if(isnan(nrml_trail_l))
             nrml_trail_l = 1;
-        double nrml_trail_r = (right->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
+        long double nrml_trail_r = (right->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
         if(isnan(nrml_trail_r))
             nrml_trail_r = 1;
-        double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
-        double right_fitness = alpha * normalised_GR_r + beta * nrml_trail_r;
+        long double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
+        long double right_fitness = alpha * normalised_GR_r + beta * nrml_trail_r;
         return left_fitness > right_fitness; 
     });
     //std::cout<<"maxAdvVal "<<maxAdvVal << "\tminAdvVal "<<minAdvVal<<"\tminDisAdvVal "<<minDisAdvVal<<"\tmaxDisAdvVal "<<maxDisAdvVal<<std::endl;
@@ -139,13 +139,13 @@ void M_class::sort(){
     for(int i=0 ; i<move_list.size() ; i++)
     {
         m* left = move_list.at(i);
-        double normalised_Adv_l = (static_cast<double>(left->adv) - minAdvVal) / static_cast<double>(maxAdvVal - minAdvVal);
-        double normalised_DisAdv_l = (static_cast<double>(left->disAdv) - minDisAdvVal)/static_cast<double>(maxDisAdvVal-minDisAdvVal);
-        double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
-        double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
+        long double normalised_Adv_l = (static_cast<long double>(left->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
+        long double normalised_DisAdv_l = (static_cast<long double>(left->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
+        long double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
+        long double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
         if(isnan(nrml_trail_l))
             nrml_trail_l = 1;
-        double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
+        long double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
         //std::cout<<"normalised_Adv_l "<<normalised_Adv_l<<"\tnormalised_DisAdv_l "<<normalised_DisAdv_l<<"\tnormalised_GR_l "<<normalised_GR_l<<"\tnrml_trail_l "<<nrml_trail_l<<std::endl;
         //std::cout<<i<<"\t"<<left_fitness<<std::endl;
     }
@@ -221,6 +221,8 @@ void ant_colony::fill_M(M_class &M,const std::map<std::pair<period*,int>,int > &
 void M_class::add_move(period* x,int i,period* y,int j,ant_colony* colony){
     //std::cout<<"Inside Add_move"<<std::endl;
     //std::cout<<"Line 1"<<y->period_name<<"\t"<<i<<std::endl;
+    if(!y->ants.at(j))
+        return ;
     long N__y__i = y->ants.at(i);
     //std::cout<<"Line 2"<<std::endl;
     long N__x__j = x->ants.at(j);
@@ -239,7 +241,7 @@ void M_class::add_move(period* x,int i,period* y,int j,ant_colony* colony){
     //std::cout<<"Line 9"<<std::endl;
     long adv = N__y__i * N__y__i + S_x_y_i + N__x__j * N__x__j + S_y_x_j;
     long disAdv = N__y__j * N__y__j + S_x_y_j + S_y_x_i;
-    double Trail = x->trails.at(j) + y->trails.at(i) - x->trails.at(i) - y->trails.at(j);
+    long double Trail = x->trails.at(j) + y->trails.at(i) - x->trails.at(i) - y->trails.at(j);
     m* new_Move = new m(y,j,adv,disAdv,Trail);
     //::cout<<"Line 10"<<std::endl;
     if(adv < minAdvVal){
@@ -362,10 +364,34 @@ bool ant_colony::coloring_valid(std::map<period* , int> &coloring){
     }
     return true;
 }
+void ant_colony::choose_Nxi(m* M_choose_Nxi[],M_class M,int N__x__i){
+    int number_of_choices = 0;
+    //a moves rank is (its index after sorting/total number of choices)
+    //we randomly select a move
+    //the probability of that move getting selected is e^(-12.5(x*x))
+    //this makes it so an element with rank 30 has a 30% chance of getting selected.
+    //the function tends to 0 really quickly as x tends to 1.
+    for(m* move : M.move_list)
+        number_of_choices += move->y->ants.at(move->color);
+    std::set<int> choices_made;
+    while(N__x__i){
+        int choice = generator() % number_of_choices;
+        if(choices_made.find(choice) != choices_made.end())
+            continue;
+        long double rank = static_cast<long double>(choice) / number_of_choices;
+        long double probability_of_selection = exp(-12.5 * rank * rank);
+        long double rndm_nmbr_bw_zero_one = static_cast<long double>(generator_64()) / generator_64.max();
+        if(rndm_nmbr_bw_zero_one <= probability_of_selection){
+            choices_made.insert(choice);
+            N__x__i--;
+            std::cout<<"Choice :: "<<choice<<"\tTotal :: "<<std::endl;
+        }
+    } 
+}
 std::string period::getName(){
     return period_name;
 }
-m::m(period* y,int color,long adv,long disAdv,double Trail){
+m::m(period* y,int color,long adv,long disAdv,long double Trail){
     this->y = y;
     this->color = color ;
     this->adv = adv;
@@ -466,11 +492,16 @@ void ant_colony::initiate_coloring(){
         std::set<int> C_x;
         std::map<period*,std::set<int>> P_x; 
         //the above three are used for trail update 
+
+        m* M_choose_Nxi[X->ants.at(i)];
+        choose_Nxi(M_choose_Nxi,M,X->ants.at(i));
+        
+        
         for(int move_counter = 0 ; X->ants.at(i) ; move_counter++){
             m* move = M.move_list.at(move_counter);
             period* y = move->y;
             int j = move->color;
-
+            std::cout<<"ANT MOVE from\t::\t"<< y->period_name<<"\t ant color \t"<<j<<"\tnumber of ant \t"<<std::min(X->ants.at(i),y->ants.at(j))<<std::endl;
             C_x.insert(j);
             P_x[y].insert(j);
 
@@ -520,9 +551,9 @@ void ant_colony::initiate_coloring(){
         //std::cout<<"initiate_coloring\t::\tf\t::\t starting"<<std::endl;
         //f pheramon update
         {
-            double maxTrail = -DBL_MAX, minTrail = DBL_MAX;
-            std::pair<double,double> rho__deltaT;
-            double Delta;
+            long double maxTrail = -DBL_MAX, minTrail = DBL_MAX;
+            std::pair<long double,long double> rho__deltaT;
+            long double Delta;
             if(conflicts > least_conflicts)
                 Delta = 0.1;
             else if(conflicts == least_conflicts)

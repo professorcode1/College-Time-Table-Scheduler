@@ -20,15 +20,17 @@
 #include <float.h>
 using namespace emscripten;
 
-const int MaxIter{5000};
+const int MaxIter{500};
 const double alpha = 1 , beta = 5;
 
 
 unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 std::mt19937 generator(seed);
 int random_number(int left,int right);
-
+class period;
+void call_js_coloring_(const std::map<period*,int> &coloring);
 std::string numberToString(int num);
+int string_to_int(std::string time);
 class lecture;
 class M_class;
 class period {
@@ -36,6 +38,7 @@ public:
   period(const std::string &period_name, int period_len_value,
          int period_freq_value, int &period_id_generator,
          lecture *parent_lecture, int total_periods);
+  std::string getName();
 void add_ban_time(std::string time);
   static std::map<int, period *> id_to_period_lookup;
   static std::map<std::string, period *> name_to_period_lookup;
@@ -66,6 +69,7 @@ private:
   std::string lecture_name;
   std::vector<period *> child_periods;
   friend class ant_colony;
+  friend class period;
 };
 
 class ant_colony {

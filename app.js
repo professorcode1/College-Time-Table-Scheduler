@@ -963,35 +963,29 @@ app.post("/parameter", async (req, res) => {
             userInfo.numberOfDays = req.user.numberOfDays;
             userInfo.periodsPerDay = req.user.periodsPerDay;
             return res.render("waiting", { user: JSON.stringify(userInfo) });
-            // console.log(req.user.periods.length, req.user.periods.length == 0)
-            // res.sendFile(__dirname + "/webPages/waitingPage.html");
-            // const childProcess = fork("./ScheduleGenerator.js");
-
-            // setTimeout(() => childProcess.send({
-            //     "user": CircularJSON.stringify(req.user),
-            //     "io": CircularJSON.stringify(req.app.get('socketio'))
-            // }), 1500);
-
-
-            // childProcess.on("message", async message => {
-            //     if (message.case == "emit")
-            //         io.emit("message", message.emit);
-            //     if (message.case == "schedule") {
-            //         io.emit("message", {
-            //             case: "complete"
-            //         });
-            //         console.log(message.schedule, typeof message.schedule);
-
-            //         console.log(await User.updateOne({
-            //             _id: req.user._id
-            //         }, {
-            //             $set: {
-            //                 schedule: message.schedule
-            //             }
-            //         }));
-            //     }
-            // });
         }
+    });
+    app.post("/generateSchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const coloring = req.body;
+        console.log(coloring);
+        for(const period of req.user.periods){
+            for(let len = 0 ; len < Number(period.periodLength) ; len++){
+                for(let freq = 0 ; freq < Number(period.periodFrequency) ; freq++){
+                    if(!coloring[String(period._id) + "Period"+String(len) + "Freq" + String(freq)])
+                        console.log("OHHHH NO WHOLLY SHET");
+                }
+            }
+        }
+        await User.updateOne({
+            _id: req.user._id
+        }, {
+            $set: {
+                schedule: req.body
+            }
+        });
+        return res.send("done");
     });
     app.get("/viewSchedules", async (req, res) => {
         const scheduleArray = await User.find({

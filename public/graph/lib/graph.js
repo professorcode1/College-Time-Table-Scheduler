@@ -242,5 +242,7 @@
     return {
       "Graph": Graph
     };
+  } else if(typeof(WorkerGlobalScope) !== 'undefined'){
+    WorkerGlobalScope.Graph = Graph;
   }
 }());

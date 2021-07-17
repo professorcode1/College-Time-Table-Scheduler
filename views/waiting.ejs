@@ -69,221 +69,13 @@
         </ol>
     </div>
 </body>
-<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"
-    integrity="sha384-DkkWv9oJFWLIydBXXjkBWnG1/fuVhw8YPBq37uvvD6WSYRFRqr21eY5Dg9ZhmWdy"
-    crossorigin="anonymous"></script>
-<script src="graph/lib/graph.js"></script>
-<script defer>
-    ScheduleGenerator = (user) => {
-        console.time("haha");
-        const {
-            numberOfDays,
-            periodsPerDay,
-            periods,
-            groups,
-            rooms,
-            professors: profs
-        } = user;
-        let schedulerGraph = new window.Graph();
-        //Initialising Graph Below
-        {
-            print_message({
-                case: "message",
-                message: "Initialising::Graph"
-            }
-            );
-            console.log("Initialising graph");
-            if (user.numberOfDays == 0 && user.periodsPerDay == 0)
-                return console.log("Completed Initialising Graph");
-            for (let lpitrt = 1; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
-                for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                    schedulerGraph.set(lpitrt, lpitrt1);
-
-            for (const room of rooms) {
-
-                for (let lpitrt = 0; lpitrt < room.periodsUsedIn.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(room.periodsUsedIn[lpitrt]) + "Period0", String(room.periodsUsedIn[lpitrt1]) + "Period0");
-
-
-                    for (const roomUnavailabiliy of room.unAvialability)
-                        schedulerGraph.set(roomUnavailabiliy, String(room.periodsUsedIn[lpitrt]) + "Period0");
-                }
-            }
-            print_message({
-                case: "message",
-                message: "Initialising::Rooms Complete"
-            }
-            );
-            console.log("Initialise::Rooms Complete");
-
-            for (const prof of profs) {
-                for (let lpitrt = 0; lpitrt < prof.periodsTaken.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(prof.periodsTaken[lpitrt]) + "Period0", String(prof.periodsTaken[lpitrt1]) + "Period0");
-
-
-                    for (const profUnavailabiliy of prof.unAvialability)
-                        schedulerGraph.set(profUnavailabiliy, String(prof.periodsTaken[lpitrt]) + "Period0");
-                }
-            }
-            print_message({
-                case: "message",
-                message: "Initialising::Professors Complete"
-
-            });
-            console.log("Initialise::Prof Done");
-
-            for (const group of groups) {
-                for (let lpitrt = 0; lpitrt < group.periodsAttended.length; lpitrt++) {
-                    for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
-                        schedulerGraph.set(String(group.periodsAttended[lpitrt]) + "Period0", String(group.periodsAttended[lpitrt1]) + "Period0");
-
-
-                    for (const groupUnavailabiliy of group.unAvialability)
-                        schedulerGraph.set(groupUnavailabiliy, String(group.periodsAttended[lpitrt]) + "Period0");
-                }
-            }
-            print_message({
-                case: "message",
-                message: "Initialising::Groups Complete"
-
-            });
-            console.log("Initialise::Group Done");
-
-            for (const period of periods) {
-                console.log("Initialise::" + period.periodName);
-                print_message({
-                    case: "message",
-                    message: "Initialising::Period " + period.periodName
-
-                });
-                for (let len = 1; len < Number(period.periodLength); len++) {
-
-                    const thisPeriodNode = String(period._id) + "Period" + String(len);
-
-                    for (const node in schedulerGraph._graph[String(period._id) + "Period0"])
-                        schedulerGraph.set(node, thisPeriodNode);
-
-                    for (let itrt = Number(period.periodLength) - 1 - len; itrt > 0; itrt--)
-                        for (let day = 0; day < numberOfDays; day++)
-                            schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, thisPeriodNode);
-
-                    for (let itrt = 0; itrt < len; itrt++)
-                        for (let day = 0; day < numberOfDays; day++)
-                            schedulerGraph.set(day * periodsPerDay + itrt, thisPeriodNode);
-                }
-
-                if (period.periodFrequency == 1) {
-
-                    if (period.periodTime != -1) {
-
-                        for (let lpitrt = 0; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
-                            if (lpitrt != period.periodTime)
-                                schedulerGraph.set(lpitrt, String(period._id) + "Period0");
-                    } else if (period.periodAntiTime.length != 0) {
-
-                        for (const antiTime of period.periodAntiTime)
-                            for (let perLen = 0; perLen < period.periodLength; perLen++)
-                                if (Number(antiTime) + perLen < numberOfDays * periodsPerDay)
-                                    schedulerGraph.set(Number(antiTime) + perLen, String(period._id) + "Period" + String(perLen));
-                    }
-                }
-
-
-                for (let itrt = Number(period.periodLength) - 1; itrt > 0; itrt--)
-                    for (let day = 0; day < numberOfDays; day++)
-                        schedulerGraph.set(day * periodsPerDay + periodsPerDay - itrt, String(period._id) + "Period0");
-
-                for (let len = 1; len < Number(period.periodLength); len++)
-                    for (let len1 = 0; len1 < len; len1++)
-                        schedulerGraph.set(String(period._id) + "Period" + String(len), String(period._id) + "Period" + String(len1));
-            }
-            let hlprGraph = schedulerGraph.copy();
-            schedulerGraph = new window.Graph();
-
-            for (let i = 0; i < numberOfDays * periodsPerDay; i++)
-                for (let j = 0; j < i; j++)
-                    schedulerGraph.set(i, j);
-
-            for (const period of periods)
-                for (let freq = 0; freq < Number(period.periodFrequency); freq++)
-                    for (let len = 0; len < Number(period.periodLength); len++) {
-                        const thisPeriodNode = String(period._id) + "Period" + String(len) + "Freq" + String(freq);
-
-                        //a corner case someone can use to break the application is to make 1 period for a university with 1 day and 1 period per day
-                        //thus creating a graph in which case neither the nodes will come into existence since the graph is intialised via edges
-                        //to avoide that edge case i.e. any graph with disjoint nodes,all nodes are first attached then detacched from 0,to create the nodes
-                        schedulerGraph.set(0, thisPeriodNode);
-                        schedulerGraph.del(0, thisPeriodNode);
-
-                        for (let freq1 = 0; freq1 < freq; freq1++)
-                            for (let len1 = 0; len1 < Number(period.periodLength); len1++)
-                                schedulerGraph.set(thisPeriodNode, String(period._id) + "Period" + String(len1) + "Freq" + String(freq1))
-
-                        for (const neighborNode in hlprGraph.adj(String(period._id) + "Period" + String(len)))
-                            if (String(neighborNode).length > 24) {
-                                let neighborPeriod = periods.find(periodItrt => String(periodItrt._id) == neighborNode.slice(0, 24));
-                                for (let freq1 = 0; freq1 < Number(neighborPeriod.periodFrequency); freq1++)
-                                    schedulerGraph.set(thisPeriodNode, neighborNode + "Freq" + String(freq1));
-                            } else
-                                schedulerGraph.set(thisPeriodNode, neighborNode);
-
-                    }
-
-            //Checking if time table is possible
-            let abort = false;
-            for (const node in schedulerGraph._graph) {
-                let inConflict = true;
-                for (let periodNumber = 0; periodNumber < numberOfDays * periodsPerDay; periodNumber++)
-                    inConflict = inConflict && schedulerGraph.has(node, periodNumber);
-                if (inConflict) {
-                    periods.find(period => String(period._id) == nodeString.slice(0, 24));
-                    console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
-                    print_message({
-                        case: "emit",
-                        emit: {
-                            case: "warning",
-                            message: "WARNING:The period " + period.periodName + " causing impossible time table config."
-                        }
-                    });
-
-                }
-            }
-            if (abort)
-                return {
-                    case: "emit",
-                    emit: {
-                        case: "abort"
-                    }
-                };
-        }
-
-        print_message({
-            case: "Initalisation_Success",
-            message: "Initialisation::Complete"
-        });
-        console.log("Initialisation Complete");
-        //Calling the ant-colony algorithm in web-assembly complied down from c++
-        {
-            var instance = new Module.ant_colony(periodsPerDay, numberOfDays, periods.length, schedulerGraph._vertices.length - (periodsPerDay * numberOfDays));
-            for (const period of periods)
-                instance.add_lecture(String(period._id), period.periodLength, period.periodFrequency);
-            for (const node of schedulerGraph._vertices){
-                if(node.length > 24)
-                    console.log(node,periods.find(period=>String(period._id) == String(node).substr(0,24)).periodName);
-                console.log(schedulerGraph._graph[node]);
-                for (const nodeNeighbor in schedulerGraph._graph[node]) {
-                    instance.add_edge(String(node), String(nodeNeighbor));
-                }
-            }
-            console.log("got here");
-            //instance.print_all_periods();
-            console.log("all done");
-            instance.initiate_coloring();
-            console.timeEnd("haha");
-        }
-    };
+<script
+  src="https://code.jquery.com/jquery-3.6.0.js"
+  integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+  crossorigin="anonymous"></script>
+<script >
+    var myWorker = new Worker('ant-colonoy-webambly/scheduler.js');
+    var coloring;
     print_message = (message) => {
         switch (message.case) {
             case "message":
@@ -313,32 +105,41 @@
                 break;
         }
     };
-    function algorithm_update(val1, val2) {
-        console.log(val1, val2);
-        print_message({
-            case: "algorithm_update",
-            generation: val1,
-            conflicts: val2
-        });
-    }
     function failure() {
         var greenPart = document.createElement("h1");
         greenPart.setAttribute("style", "color:yellow");
-        greenPart.appendChild(document.createTextNode("FAILURE::The algorithm has failed. You can see the best schedule it has generated, but it will have errors."));
+        greenPart.appendChild(document.createTextNode("FAILURE::The algorithm has failed. You can see the best schedule it has generated, but it will have errors.Also since the schedule is generated here at front-end using a non-deterministic algorithm you can just reload to roll the dice again."));
         document.getElementById("main_div").appendChild(greenPart);
-        complete();
+    }
+    function database_update_failure() {
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:yellow");
+        greenPart.appendChild(document.createTextNode("FAILURE::The schedule generated but the request to update database could not complete"));
+        document.getElementById("main_div").appendChild(greenPart);
     }
     function complete() {
-        document.getElementById("main_div").appendChild(document.createElement("br"));
-        var h3 = document.createElement("h3");
-        var a = document.createElement("a");
-        a.setAttribute("href", "/viewMySchedule");
-        a.innerHTML = " here ";
-        h3.appendChild(document.createTextNode("Click "));
-        h3.appendChild(a);
-        h3.appendChild(document.createTextNode(" to redirect to your schedule"));
-        document.getElementById("main_div").appendChild(h3);
-        window.scrollTo(0, document.body.scrollHeight);
+        // var xhr = new XMLHttpRequest();
+        // xhr.open("POST", "/generateSchedule", true);
+        // xhr.setRequestHeader('Content-Type', 'application/json');
+        // console.log("what imma send",coloring);
+        // xhr.send(JSON.stringify("coloring"));
+        $.post("/generateSchedule",coloring,(status) =>{
+            console.log(status);
+            if(status == "done"){
+                document.getElementById("main_div").appendChild(document.createElement("br"));
+                var h3 = document.createElement("h3");
+                var a = document.createElement("a");
+                a.setAttribute("href", "/viewMySchedule");
+                a.innerHTML = " here ";
+                h3.appendChild(document.createTextNode("Click "));
+                h3.appendChild(a);
+                h3.appendChild(document.createTextNode(" to redirect to your schedule"));
+                document.getElementById("main_div").appendChild(h3);
+                window.scrollTo(0, document.body.scrollHeight);
+            }else 
+            database_update_failure();
+        });
+
     }
     function updateCounters(params) {
         document.getElementById("generationCounter").innerHTML = params.generation;
@@ -379,7 +180,7 @@
         generationCounter.setAttribute("id", "generationCounter");
         var conflictCounter = document.createElement("span");
         conflictCounter.setAttribute("id", "conflictCounter");
-        updateCounter.appendChild(document.createTextNode("Generation::"));
+        updateCounter.appendChild(document.createTextNode("Iteration::"));
         updateCounter.appendChild(generationCounter);
         updateCounter.appendChild(document.createElement("br"));
         updateCounter.appendChild(document.createTextNode("Conflict Counter::"));
@@ -403,18 +204,29 @@
         window.scrollTo(0, document.body.scrollHeight);
     }
     const user = JSON.parse(document.getElementById("userInfo").innerHTML);
+    myWorker.onmessage = function(transmission) {
+        console.log(transmission);
+        const message = transmission.data;
+        switch (message.case) {
+            case "module_loaded":
+                myWorker.postMessage(user);                
+                break;
+            case "complete":
+                 console.log(message.coloring);
+                 coloring = message.coloring;
+                break;
+            default:
+                break;
+        }
+        print_message(message);
+    }
     const neonGreen = "#39FF14";
     const neonOrange = "#FF6700"
-    var Module = {
-        onRuntimeInitialized: function () {
-            ScheduleGenerator(user);
-        }
-    };
+
 </script>
 <script src="particles.js-master/particles.js">
 </script>
 <script src="/particles.js-master/demo/js/app.js">
 </script>
-<script src="ant-colonoy-webambly/ant_colony.js"></script>
 
 </html>

@@ -1,32 +1,35 @@
 # **College Scheduler**
 
-This the software engineering project made by me as the semester 4 engineering project. Its solves the common university problem of having to perfrom tedious scheduling.
+This is the software engineering project made by me as the semester 4 software engineering project. Its solves the common university problem of having to perfrom tedious scheduling.
 
-<img alt="preview" src="ImagesOfProject/Waiting-.png" width="90%">
-<img alt="preview" src="ImagesOfProject/Homepage.png" width="90%">
-<img alt="preview" src="ImagesOfProject/Courses.png" width="90%">
-<img alt="preview" src="ImagesOfProject/Scheduler.png" width="90%">
-<img alt="preview" src="ImagesOfProject/Professors.png" width="90%">
+<img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Waiting-.png" width="90%" class="jop-noMdConv"> <img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Homepage.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Courses.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Scheduler.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Professors.png" width="90%" class="jop-noMdConv">
+
+* * *
+
+particle.js was used in the waiting page. Credit goes to author.
+
+https://github.com/VincentGarreau/particles.js
+
+* * *
+
+The paper used to impliment the graph coloring is written by Alain Hertz and Nicolas Zufferey. Full credit goes to the author
+
+[https://www.researchgate.net/publication/249906915\_A\_New\_Ant\_Algorithm\_for\_Graph_Coloring](https://www.researchgate.net/publication/249906915_A_New_Ant_Algorithm_for_Graph_Coloring)
+
+* * *
 
 To use this, follow the below steps.
 
 - Git clone this repo
 - Make sure you have node installed
-- Make sure you have Python 3.6(or above),make and GCC installled(for unix/linux)
-- for any other OS refer here to know the dependencies https://www.npmjs.com/package/node-gyp
-- open the terminal in the folder of the project
-- run `npm install -g node-gyp` to get the gyp compiler 
-- run `npm install` to get all the node modules as well as generate the build files.(a folder by the name of build will also appear along with the node_modules folder)
-- Generating the build files are the most troublesome. If node-gyp is giving you trouble try using cmake.js.(perhaps it wan't you to use `node-gyp configure` first) Just get the build folder successfully without errors.
-- cut and paste this build folder into the node_modules folder
+- run `npm install` to get all the node modules
 - have a mongod server on your local machine up and running
-- replace the string `"mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"` on lines 41 and 52 in app.js with `"mongodb://localhost:27017/collegeScheduler"`
 - run `node app.js` to run the application
 - open any browser and goto `localhost:3000` to use the application.
 
-It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in the mongodb shell
+It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in your linux terminal(with the mongodb server running) (you will need to have `mongodb-tools-bin` installed)
 `mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
-Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset.
+Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset(see the section_TT.pdf to see the bases)
 
 * * *
 
@@ -50,10 +53,9 @@ The database queries should be done in the form of procedures and functions impl
 
 ## Generate Schedule
 
-Once a user goes to the `/generateSchedule` route, the user performs a two-way handshake witht the backend using `socketio` (or simply, has a full-duplex connection with the backend) to get real-time updates on the schedule generation process. Now since JS and by extentions node is a single threaded(kindof) generating the schedules in the same JS process will completely block the JS application.
+Once a user goes to the `/generateSchedule` route, the user loads all their data (i.e. a copy of their entire database entry) as well as the js and wasm file that will be used to generate the schedule on their local machine. The file called scheduler.js is run in parallel as a web worker and given the users info. After turing all the information into a graph, it then calles the ant-colony.js/ant-colony.wasm which in turn the colors the graph. Once the graph is colored the front end sends the coloring as a post request and the backend updates the database. Now the user can view their schedule.
 
-To prevent this, the actual generation is done by forking ScheduleGenerator.js to create a child process, which effectively is another node.js process. ScheduleGenerator.js performs the below algorithm.
-To actually generate the schedule the following algorithm is followed
+Here's how scheduler.js works
 
 - For each period a node in the graph is initalised.
 - For each professor an edge in initalised b/w all the periods taught by the professor
@@ -62,10 +64,31 @@ To actually generate the schedule the following algorithm is followed
 - The number b/w \[1 , number of day * number of periods\] also have a unique node created corresponding to them. So say you the university operates for 8 hours and from monday to friday then for each number in the set {1,5 * 8} = {1,40} a node is initalised.
 - For each set time an edge b/w all other times and the corresponding period is intialised. So if set-time is tuesday hour 5 for period p, then node 1 * 8 + 5 = node 13, then p will have an edge initalised for all nodes in {1,40} except 13.
 - For each ban time the node b/w the time and the corresponding period is intialised. So if ban-time is friday hour 2 for period p, then node 4 * 8 + 5 = node 37 and p have an edge intialised.
-- One last contraint is applied. The manufacturing lab is 3 hours long, which means that it cannot be started at periods 7,8 as this would mean that a part of the period will take place the next day. To account for this fact as well, edges are drawn b/w such times and periods which go over one hour.
+- One last contraint is applied. The manufacturing lab is 3 hours long, which means that it cannot be started at periods 7,8 as this would mean that a part of the period will take place the next day. To account for this fact as well, edges are drawn b/w such times and periods which go over one hour. Lets call these edges the continuity constraint
 
-Now that the graph is generated it is colored using a Genetic Algorithm.
+Now to color the graph, the web-assembly used is actually compiled from C++ using emscripten. You can see the C++ code in the ant-colony-cpp folder.
 
-There are a hugh number of papers covering how to implement GA to color graphs so I wont cover it here. The algorithm runs in C++ which is attached to the project using node-gyp. node-gyp generates an ABI(Application Binary Interface). You can see the implementation in Cpp folder.
+The algorithm used is a minor variation of the algorithm proposed in the following paper. All credits for the algorithm goes to the authors of the paper.
 
-Once a coloring is generated, the child process exits and the database is updated to reflect that the user has a schedule.
+A New Ant Algorithm for Graph Coloring - Alain Hertz and Nicolas Zufferey.
+
+The minor variations are dicussed below
+
+#### Variations in Problem Statment
+
+- We already know the chromatic number with which we intend to color, so we start with it and reduce conflicts
+- Certain nodes in the graph cannot have certain colors (the ban-time set-time contraint and the continuity constraint)
+- Certain nodes needs to have consequtive colors (since lecture over one hour have a node for each hour)
+
+#### Variations in implimentation
+
+- When the ants are initalised. Every node get ants for colors viable to that node.
+- When ants move,then only move from a node which considers their colors to be viable to another node which considers their color viable
+- If a node is in conflict, all its sibling nodes (nodes corresponding to the same lecture) get recolored(with consecutive colors).
+- In the sorting of moves, they are not just sorted via p(m,t) but rather first they are sorted via how much they reduce conflicts by and then in-place sorting via p(m,t) takes place. This might in an of itself make the algorithm worse, but measure taken to prevent that from happening is dicussed in the next point
+- The selection of nodes in not greedy like the paper suggests, but rather probabalistic. After sorting every move has a rank (its index after sorting / total number of moves ). So the to select N<sub>l</sub>(x,t-1) moves we randomly generate an index. Now the probability that the move will be selected is given by e <sup>-500 rank<sup>2</sup></sup>. With this probability we select the move, or we discard it. We keep generating random indexes till we get the N<sub>l</sub>(x,t-1) moves.This can create a deadlock situation if N<sub>l</sub>(x,t-1) is high while the number of moves is low but I never even came close to encountering it . This makes the selection almost greedy, only the top 10% actually get picked, but this method by my observation coupled with the above variation made the algorithm much better.
+- pheramon update takes place after coloring has been performed(the paper suggests to do the phermon update before, which seems counter intuitive).
+<br>
+Even though the algorithm is single threaded, it never once took over 5 seconds to create the schedule (of thapar even semester 2020)
+
+<b><i>Made by Raghav Kumar</b></i>

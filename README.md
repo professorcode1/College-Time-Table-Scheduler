@@ -2,7 +2,11 @@
 
 This is the software engineering project made by me as the semester 4 software engineering project. Its solves the common university problem of having to perfrom tedious scheduling.
 
-<img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Waiting-.png" width="90%" class="jop-noMdConv"> <img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Homepage.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Courses.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Scheduler.png" width="90%" class="jop-noMdConv"><img alt="preview" src="/usr/share/joplin-desktop/resources/app.asar/ImagesOfProject/Professors.png" width="90%" class="jop-noMdConv">
+<img alt="preview" src="ImagesOfProject/Waiting-.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Homepage.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Courses.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Scheduler.png" width="90%">
+<img alt="preview" src="ImagesOfProject/Professors.png" width="90%">
 
 * * *
 

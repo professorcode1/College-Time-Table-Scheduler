@@ -37,8 +37,8 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(express.static("public"));
-
-mongoose.connect("mongodb://localhost:27017/collegeScheduler", {
+console.log(encodeURIComponent(process.env.MONGOCLUSTERPASS),process.env.MONGOCLUSTERPASS);
+mongoose.connect("mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority", {
     poolSize: 460,
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -49,7 +49,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: "mongodb://localhost:27017/collegeScheduler"
+        mongoUrl: "mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"
     })
 }));
 app.use(passport.initialize());
@@ -965,44 +965,44 @@ app.post("/parameter", async (req, res) => {
             return res.render("waiting", { user: JSON.stringify(userInfo) });
         }
     });
-    app.get("/geneticAlgo", async (req, res) => {
-        if (!req.isAuthenticated())
-            return res.redirect("/login");
-        if (req.user.periods.length == 0)
-            return res.render("message", {
-                message: "Please make some periods first"
-            });
-        else {
-            console.log(req.user.periods.length, req.user.periods.length == 0)
-            res.sendFile(__dirname + "/webPages/waitingPage.html");
-            const childProcess = fork("./ScheduleGenerator.js");
+    // app.get("/geneticAlgo", async (req, res) => {
+    //     if (!req.isAuthenticated())
+    //         return res.redirect("/login");
+    //     if (req.user.periods.length == 0)
+    //         return res.render("message", {
+    //             message: "Please make some periods first"
+    //         });
+    //     else {
+    //         console.log(req.user.periods.length, req.user.periods.length == 0)
+    //         res.sendFile(__dirname + "/webPages/waitingPage.html");
+    //         const childProcess = fork("./ScheduleGenerator.js");
 
-            setTimeout(() => childProcess.send({
-                "user": CircularJSON.stringify(req.user),
-                "io": CircularJSON.stringify(req.app.get('socketio'))
-            }), 1500);
+    //         setTimeout(() => childProcess.send({
+    //             "user": CircularJSON.stringify(req.user),
+    //             "io": CircularJSON.stringify(req.app.get('socketio'))
+    //         }), 1500);
 
 
-            childProcess.on("message", async message => {
-                if (message.case == "emit")
-                    io.emit("message", message.emit);
-                if (message.case == "schedule") {
-                    io.emit("message", {
-                        case: "complete"
-                    });
-                    console.log(message.schedule, typeof message.schedule);
+    //         childProcess.on("message", async message => {
+    //             if (message.case == "emit")
+    //                 io.emit("message", message.emit);
+    //             if (message.case == "schedule") {
+    //                 io.emit("message", {
+    //                     case: "complete"
+    //                 });
+    //                 console.log(message.schedule, typeof message.schedule);
 
-                    console.log(await User.updateOne({
-                        _id: req.user._id
-                    }, {
-                        $set: {
-                            schedule: message.schedule
-                        }
-                    }));
-                }
-            });
-        }
-    });
+    //                 console.log(await User.updateOne({
+    //                     _id: req.user._id
+    //                 }, {
+    //                     $set: {
+    //                         schedule: message.schedule
+    //                     }
+    //                 }));
+    //             }
+    //         });
+    //     }
+    // });
     app.post("/generateSchedule", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");

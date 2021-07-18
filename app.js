@@ -37,7 +37,6 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(express.static("public"));
-console.log(encodeURIComponent(process.env.MONGOCLUSTERPASS),process.env.MONGOCLUSTERPASS);
 mongoose.connect("mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority", {
     poolSize: 460,
     useNewUrlParser: true,

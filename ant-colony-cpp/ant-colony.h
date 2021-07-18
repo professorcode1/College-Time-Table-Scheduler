@@ -20,7 +20,7 @@
 #include <float.h>
 using namespace emscripten;
 
-const int MaxIter{50};
+const int MaxIter{500};
 const long double alpha = 1 , beta = 5;
 
 
@@ -89,16 +89,17 @@ private:
       period_id_generator, lecture_id_generator;
   std::vector<lecture *> lectures;
   std::map<period *, std::set<period *>> edges;
+  std::map<int,std::set<int>> edges_by_period_id;
   std::map<std::pair<period*,int>,int> neighbor_ant_count; //given a period and color, 
   //it tells sum of all ants of that color over adjacent nodes 
   void create_ants();
   void dsatur_color(std::map<period* , int> &coloring,int** neighbor_color_counter);
   bool coloring_valid(std::map<period* , int> &coloring);
-  int conflicts(std::map<period* , int> &coloring);
+  int conflicts(const std::map<period* , int> &coloring,int** neighbor_color_counter);
   period* node_to_be_recolored(std::map<period* , int> &coloring);
   void fill_M(M_class &M,const std::map<std::pair<period*,int>,int > &tabu_table,period* X,int i);
   void node_to_be_recolored(std::set<period*> &A,std::map<period* , int> &coloring);
-  void choose_Nxi(m* M_choose_Nxi[],M_class M,int N__x__i);
+  void choose_Nxi(m* M_choose_Nxi[],const M_class &M,int N__x__i);
   friend class M_class;
 };
 

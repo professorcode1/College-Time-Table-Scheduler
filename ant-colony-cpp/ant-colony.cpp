@@ -96,7 +96,7 @@ void ant_colony::add_edge(std::string node_One , std::string node_Two){
     else{
         edges.at(period::name_to_period_lookup.at(node_One)).insert(period::name_to_period_lookup.at(node_Two));
         edges.at(period::name_to_period_lookup.at(node_Two)).insert(period::name_to_period_lookup.at(node_One));
-    }
+        }
 }
 void ant_colony::print_all_periods(){
     for(std::map<int,period*>::iterator it=period::id_to_period_lookup.begin() ; it != period::id_to_period_lookup.end() ; it++){
@@ -136,19 +136,19 @@ void M_class::sort(){
     });
     //std::cout<<"maxAdvVal "<<maxAdvVal << "\tminAdvVal "<<minAdvVal<<"\tminDisAdvVal "<<minDisAdvVal<<"\tmaxDisAdvVal "<<maxDisAdvVal<<std::endl;
     //std::cout<<"maxGr " << maxGr << "\tminGr "<<minGr<<"\tminTrailVal "<<minTrailVal<<"\tmaxTrailVal "<<maxTrailVal<<std::endl;
-    for(int i=0 ; i<move_list.size() ; i++)
-    {
-        m* left = move_list.at(i);
-        long double normalised_Adv_l = (static_cast<long double>(left->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
-        long double normalised_DisAdv_l = (static_cast<long double>(left->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
-        long double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
-        long double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
-        if(isnan(nrml_trail_l))
-            nrml_trail_l = 1;
-        long double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
-        //std::cout<<"normalised_Adv_l "<<normalised_Adv_l<<"\tnormalised_DisAdv_l "<<normalised_DisAdv_l<<"\tnormalised_GR_l "<<normalised_GR_l<<"\tnrml_trail_l "<<nrml_trail_l<<std::endl;
-        //std::cout<<i<<"\t"<<left_fitness<<std::endl;
-    }
+    // for(int i=0 ; i<move_list.size() ; i++)
+    // {
+    //     m* left = move_list.at(i);
+    //     long double normalised_Adv_l = (static_cast<long double>(left->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
+    //     long double normalised_DisAdv_l = (static_cast<long double>(left->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
+    //     long double normalised_GR_l = (normalised_Adv_l - normalised_DisAdv_l - minGr) / (maxGr - minGr);
+    //     long double nrml_trail_l = (left->Trail - minTrailVal)/(maxTrailVal - minTrailVal);
+    //     if(isnan(nrml_trail_l))
+    //         nrml_trail_l = 1;
+    //     long double left_fitness = alpha * normalised_GR_l + beta * nrml_trail_l;
+    //     std::cout<<"normalised_Adv_l "<<normalised_Adv_l<<"\tnormalised_DisAdv_l "<<normalised_DisAdv_l<<"\tnormalised_GR_l "<<normalised_GR_l<<"\tnrml_trail_l "<<nrml_trail_l<<std::endl;
+    //     std::cout<<i<<"\t"<<left_fitness<<std::endl;
+    // }
 }
 void ant_colony::dsatur_color(std::map<period* , int> &coloring,int** neighbor_color_counter){
     std::map<period*,int> saturation_counter; //at any given tells the saturation of any node
@@ -190,8 +190,9 @@ void ant_colony::dsatur_color(std::map<period* , int> &coloring,int** neighbor_c
         }
         for(int len = 0 ; len < node->parent_lecture->lecture_length ; len++){
             //std::cout<<period::id_to_period_lookup.at(node->period_id + len)->period_name<<std::endl;
-            coloring.at(period::id_to_period_lookup.at(node->period_id + len)) = color + len;
-            for(period* neighbor_node : edges.at(node)){
+            period* period_ = period::id_to_period_lookup.at(node->period_id + len);
+            coloring.at(period_) = color + len;
+            for(period* neighbor_node : edges.at(period_)){
                 saturation_counter.at(neighbor_node)++;
                 neighbor_color_counter[neighbor_node->period_id][color+len]++;
             }
@@ -276,8 +277,8 @@ void M_class::add_move(period* x,int i,period* y,int j,ant_colony* colony){
     //std::cout<<"Add_Move complete "<<std::endl;
 
 }
-void update_js(int iterations,int conflicts){
-    std::string javascript_update_str = "algorithm_update(" + numberToString(iterations) + "," + numberToString(conflicts) + ")";
+void update_js(int iterations,int conflicts,int least_conflicts){
+    std::string javascript_update_str = "algorithm_update(" + numberToString(iterations) + "," + numberToString(conflicts)+","+numberToString(least_conflicts) + ")";
     const char* javascript_update_C_str = javascript_update_str.c_str();
     emscripten_run_script(javascript_update_C_str);
 }
@@ -314,15 +315,34 @@ period* ant_colony::node_to_be_recolored(std::map<period* , int> &coloring){
     std::advance(itrt,random_number(0,conflicted_nodes.size()));
     return *itrt;
 }
-int ant_colony::conflicts(std::map<period* , int> &coloring){
+int ant_colony::conflicts(const std::map<period* , int> &coloring,int** neighbor_color_counter){
     //an edge b/w two nodes of the same color counts as conflict
     int conflict_counter{0};
-    for(std::map<period*,std::set<period*> >::iterator itrt = edges.begin() ; itrt != edges.end() ; itrt++){
-        period* node = itrt->first;
-        for(period* neighbor_node:itrt->second)
-            if(coloring.at(node) == coloring.at(neighbor_node))
-                conflict_counter++;
-    }
+    
+    //this stratergy doesn't work for some reason. It says there are 0 conflicts 
+    // std::map<int,std::set<int>> coloring_;
+    // for(std::map<period* , int>::const_iterator itrt = coloring.begin() ; itrt != coloring.end() ; itrt++ )
+    //     coloring_[itrt->second].insert(itrt->first->period_id);
+    // for(std::map<int,std::set<int>>::iterator itrt = coloring_.begin() ; itrt != coloring_.end() ; itrt++)
+    //     for(std::set<int>::iterator first_node_id = itrt->second.begin() ; first_node_id != itrt->second.end() ; first_node_id++){
+    //         std::set<int>::iterator second_node_id = first_node_id;
+    //         for(std::advance(second_node_id,1) ; second_node_id != itrt->second.end() ; second_node_id++)
+    //             if(edges_by_period_id.at(*first_node_id).find(*second_node_id) != edges_by_period_id.at(*first_node_id).end())
+    //                 conflict_counter++;
+    //     }
+
+   for(std::map<period* , int>::const_iterator itrt=coloring.begin() ; itrt != coloring.end() ; itrt++)
+       conflict_counter += neighbor_color_counter[itrt->first->period_id][itrt->second];
+
+    // for(std::map<period*,std::set<period*> >::iterator itrt = edges.begin() ; itrt != edges.end() ; itrt++){
+    //     period* node = itrt->first;
+    //     for(period* neighbor_node:itrt->second)
+    //         if(coloring.at(node) == coloring.at(neighbor_node))
+    //             conflict_counter++;
+    // }
+    // conflict_counter /= 2;
+
+
     return conflict_counter;
 }
 void ant_colony::create_ants(){
@@ -364,8 +384,9 @@ bool ant_colony::coloring_valid(std::map<period* , int> &coloring){
     }
     return true;
 }
-void ant_colony::choose_Nxi(m* M_choose_Nxi[],M_class M,int N__x__i){
+void ant_colony::choose_Nxi(m* M_choose_Nxi[],const M_class &M,int N__x__i){
     int number_of_choices = 0;
+    const long double elite = -500;
     //a moves rank is (its index after sorting/total number of choices)
     //we randomly select a move
     //the probability of that move getting selected is e^(-12.5(x*x))
@@ -379,12 +400,12 @@ void ant_colony::choose_Nxi(m* M_choose_Nxi[],M_class M,int N__x__i){
         if(choices_made.find(choice) != choices_made.end())
             continue;
         long double rank = static_cast<long double>(choice) / number_of_choices;
-        long double probability_of_selection = exp(-12.5 * rank * rank);
+        long double probability_of_selection = exp(elite * rank * rank);
         long double rndm_nmbr_bw_zero_one = static_cast<long double>(generator_64()) / generator_64.max();
         if(rndm_nmbr_bw_zero_one <= probability_of_selection){
             choices_made.insert(choice);
             N__x__i--;
-            std::cout<<"Choice :: "<<choice<<"\tTotal :: "<<std::endl;
+            //std::cout<<"Choice :: "<<choice<<"\tTotal :: "<<std::endl;
         }
     } 
 }
@@ -466,10 +487,10 @@ void ant_colony::initiate_coloring(){
     }
     //STEP 5
     std::map<std::pair<period*,int>,int > tabu_table; //map period, color to its tabu tenure
-    int iterations{1} , least_conflicts{conflicts(coloring)} , iterations_without_improvment{1};
+    int iterations{1} , least_conflicts{conflicts(coloring,neighbor_color_counter)} , iterations_without_improvment{1};
     int conflicts{least_conflicts};
     std::map<period* , int> best_coloring(coloring);
-    update_js(iterations,least_conflicts);
+    update_js(iterations,conflicts,least_conflicts);
     //STEP 6
     while(iterations_without_improvment < MaxIter && least_conflicts > 0){
         //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t starting"<<std::endl;
@@ -501,7 +522,7 @@ void ant_colony::initiate_coloring(){
             m* move = M.move_list.at(move_counter);
             period* y = move->y;
             int j = move->color;
-            std::cout<<"ANT MOVE from\t::\t"<< y->period_name<<"\t ant color \t"<<j<<"\tnumber of ant \t"<<std::min(X->ants.at(i),y->ants.at(j))<<std::endl;
+            //std::cout<<"ANT MOVE from\t::\t"<< y->period_name<<"\t ant color \t"<<j<<"\tnumber of ant \t"<<std::min(X->ants.at(i),y->ants.at(j))<<std::endl;
             C_x.insert(j);
             P_x[y].insert(j);
 
@@ -534,11 +555,14 @@ void ant_colony::initiate_coloring(){
             for(std::map<period*,std::set<int>>::iterator itrt = P_x.begin() ; itrt != P_x.end() ; itrt++)
                 A.insert(period::id_to_period_lookup.at(itrt->first->period_id - itrt->first->period_len_value));
 
-            for(period* node : A){
-                int color = coloring.at(node);
-                coloring.at(node) = -1;
-                for(auto neighbor_node : edges.at(node)){
-                    neighbor_color_counter[neighbor_node->period_id][color]--;
+            for(period* node_ : A){
+                for(int len=0 ; len < node_->parent_lecture->lecture_length ; len++){
+                    period* node = period::id_to_period_lookup.at(node_->period_id + len);
+                    int color = coloring.at(node);
+                    coloring.at(node) = -1;
+                    for(auto neighbor_node : edges.at(node)){
+                        neighbor_color_counter[neighbor_node->period_id][color]--;
+                    }
                 }
             }
         }
@@ -546,7 +570,7 @@ void ant_colony::initiate_coloring(){
         //std::cout<<"initiate_coloring\t::\ti\t::\t starting"<<std::endl;
         //i 
         dsatur_color(coloring,neighbor_color_counter);
-        conflicts = this->conflicts(coloring);
+        conflicts = this->conflicts(coloring,neighbor_color_counter);
 
         //std::cout<<"initiate_coloring\t::\tf\t::\t starting"<<std::endl;
         //f pheramon update
@@ -627,14 +651,14 @@ void ant_colony::initiate_coloring(){
         //k
         iterations_without_improvment++;
         iterations++;
-        update_js(iterations,least_conflicts);
+        update_js(iterations,conflicts,least_conflicts);
     }
     std::cout<<"Coloring performed successfully"<<std::endl;
     if(coloring_valid(coloring)){        
         std::cout<<"COLORING VALID"<<std::endl;
         if(least_conflicts > 0)
             emscripten_run_script("failed()");
-        call_js_coloring_(coloring);
+        call_js_coloring_(best_coloring);
     } else {
         std::cout<<"COLORING INVALID"<<std::endl;
         return;

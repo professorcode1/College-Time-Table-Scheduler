@@ -120,7 +120,7 @@ class M_class{
   M_class();
   ~M_class();
   void add_move(period* x,int i,period* y,int j,ant_colony* colony);
-  void sort();
+  void sort(period* X,int i,int** neighbor_color_counter);
   private:
   std::vector<m*> move_list;
   m *maxAdvMove,*maxDisAdvMove,*minAdvMove,*minDisAdvMove,*minTrailMove,*maxTrailMove;

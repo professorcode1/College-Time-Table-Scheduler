@@ -106,7 +106,7 @@ void ant_colony::print_all_periods(){
         std::copy(it->second->viable_colors.begin(),it->second->viable_colors.end(),std::ostream_iterator<int>(std::cout," "));
     }
 }
-void M_class::sort(){
+void M_class::sort(period* X,int i,int** neighbor_color_counter){
     long double maxGr{-DBL_MAX},minGr{DBL_MAX};
     for(m* move : move_list){
         long double normalised_Adv = (static_cast<long double>(move->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
@@ -117,7 +117,12 @@ void M_class::sort(){
         if(Gr < minGr)
             minGr = Gr;
     }
-    std::sort(move_list.begin(),move_list.end(),[this,maxGr,minGr](m* left,m* right){
+    std::sort(move_list.begin(),move_list.end(),[this,maxGr,minGr,&X,i,&neighbor_color_counter](m* left,m* right){
+        int decrease_in_conflict_left{0} , decrease_in_conflict_right{0};
+        decrease_in_conflict_left = neighbor_color_counter[left->y->period_id][left->color] + neighbor_color_counter[X->period_id][i] - neighbor_color_counter[X->period_id][left->color] - neighbor_color_counter[left->y->period_id][i] ;
+        decrease_in_conflict_right =  neighbor_color_counter[right->y->period_id][right->color] + neighbor_color_counter[X->period_id][i] - neighbor_color_counter[X->period_id][right->color] - neighbor_color_counter[right->y->period_id][i];
+        if(decrease_in_conflict_left != decrease_in_conflict_right)
+            return decrease_in_conflict_left > decrease_in_conflict_right;
         long double normalised_Adv_l = (static_cast<long double>(left->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
         long double normalised_DisAdv_l = (static_cast<long double>(left->disAdv) - minDisAdvVal)/static_cast<long double>(maxDisAdvVal-minDisAdvVal);
         long double normalised_Adv_r = (static_cast<long double>(right->adv) - minAdvVal) / static_cast<long double>(maxAdvVal - minAdvVal);
@@ -505,7 +510,7 @@ void ant_colony::initiate_coloring(){
         //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t calling fill_M"<<std::endl;
         fill_M(M,tabu_table,X,i);
         //std::cout<<"initiate_coloring\t::\ta and b and c\t::\t sorting M"<<std::endl;
-        M.sort();
+        M.sort(X,i,neighbor_color_counter);
 
         //std::cout<<"initiate_coloring\t::\td and e\t::\t starting"<<std::endl;
         //d and e

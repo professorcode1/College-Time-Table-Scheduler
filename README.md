@@ -27,7 +27,7 @@ To use this, follow the below steps.
 - Git clone this repo
 - Make sure you have node installed
 - run `npm install` to get all the node modules
-- if you get some 'ERR' about build failing don't worry about it.
+- replace the string "mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority" on lines 41 and 52 with "mongodb://localhost:27017/collegeScheduler"
 - have a mongod server on your local machine up and running
 - run `node app.js` to run the application
 - open any browser and goto `localhost:3000` to use the application.

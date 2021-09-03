@@ -45,9 +45,10 @@
         </div>
     </nav>
     <p class="m-2 text-center display-2">Periods</p>    
+    <div class="container">
+        <div class="row">
     <%for(const period of periods){%>
-        <div class="container">
-            <div class="row">
+    
                 <div class="col-4  border rounded border-success">
                     <h3>Period name : <%=period.periodName%></h3> <br>
                     Parent Course : <%=period.parentCourse%> <br>
@@ -59,9 +60,9 @@
                 Preference : <%=period.preference%> <br>
                     <a href=<%="/deletePeriod/"+period._id%>>Delete</a> this period. <br> <br>
                 </div>
-            </div>
-        </div>
     <%}%>
+</div>
+</div>
 
   
 </body>

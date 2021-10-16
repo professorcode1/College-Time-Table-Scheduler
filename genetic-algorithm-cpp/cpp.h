@@ -58,7 +58,7 @@ const int population_size{800},numberOfThreads{15};
 const float probability_of_mutation{0.01}, fraction_of_population_mutated{0.15}, fraction_of_population_elite{0.1};
 const int crossovers = population_size-ceil(fraction_of_population_elite * population_size);
 int genSinceImporvmentToleranceValue{100};
-const int numberOfResetsToleranceValue{5};
+const int numberOfResetsToleranceValue{1};
 using namespace std;
 inline int sudorandom_number_generator(int left, int right);
 int tournament_selection(int left, int right);

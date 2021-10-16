@@ -152,7 +152,7 @@
         var li = document.createElement("li");
         var greenPart = document.createElement("h1");
         greenPart.setAttribute("style", "color:red");
-        greenPart.appendChild(document.createTextNode("ABORTING::Fix all period/s throwing warning to proceed with generation"));
+        greenPart.appendChild(document.createTextNode("ABORTING :: " + message));
         li.appendChild(greenPart);
         ul.appendChild(li);
         window.scrollTo(0, document.body.scrollHeight);

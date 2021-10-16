@@ -1,29 +1,29 @@
 importScripts("ant_colony.js");
 importScripts("../graph/lib/graph.js");
 var coloring = new Object();
-function algorithm_update(val1, val2,val3) {
+function algorithm_update(val1, val2, val3) {
     console.log(val1, val2);
     postMessage({
         case: "algorithm_update",
         generation: val1,
         conflicts: val2,
-        leastConflicts : val3
+        leastConflicts: val3
     });
 }
-function failed(){
-    postMessage({case:"failure"});
+function failed() {
+    postMessage({ case: "failure" });
 }
-function js_coloring_(node,color){
+function js_coloring_(node, color) {
     coloring[node] = color;
 }
-function complete(){
+function complete() {
     postMessage({
-        case:"complete",
-        coloring : coloring
+        case: "complete",
+        coloring: coloring
     });
 }
 console.log(WorkerGlobalScope.Graph);
-ScheduleGenerator = (user,Module) => {
+ScheduleGenerator = (user, Module) => {
     console.time("haha");
     console.log("called");
     const {
@@ -43,8 +43,16 @@ ScheduleGenerator = (user,Module) => {
         }
         );
         console.log("Initialising graph");
-        if (user.numberOfDays == 0 && user.periodsPerDay == 0)
-            return console.log("Completed Initialising Graph");
+        if (numberOfDays <= 0 || periodsPerDay <= 0){
+            postMessage({
+                case : "warning",
+                message : "The number of Days and the Periods Per day need to be +Ve integers"
+            });
+            return postMessage({
+                case : "abort",
+                message : "Fix the issue by giving proper number of days and number of periods."
+            })
+        }
         for (let lpitrt = 1; lpitrt < numberOfDays * periodsPerDay; lpitrt++)
             for (let lpitrt1 = 0; lpitrt1 < lpitrt; lpitrt1++)
                 schedulerGraph.set(lpitrt, lpitrt1);
@@ -58,6 +66,22 @@ ScheduleGenerator = (user,Module) => {
 
                 for (const roomUnavailabiliy of room.unAvialability)
                     schedulerGraph.set(roomUnavailabiliy, String(room.periodsUsedIn[lpitrt]) + "Period0");
+            }
+            let roomUsage = 0;
+            for(const periodId of room.periodsUsedIn){
+                period = periods.find(p => String(p._id) == periodId);
+                roomUsage += period.periodLength * period.periodFrequency
+            }
+            console.log(roomUsage);
+            if(roomUsage > numberOfDays * periodsPerDay){
+                postMessage({
+                    case : "warning",
+                    message : "The room " + room.roomName + " has more than " + String(numberOfDays * periodsPerDay) + " periods. This makes scheduling impossible."
+                });
+                return postMessage({
+                    case : "abort",
+                    message : "Fix the issue by reducing load on said room"
+                })  
             }
         }
         postMessage({
@@ -76,6 +100,23 @@ ScheduleGenerator = (user,Module) => {
                 for (const profUnavailabiliy of prof.unAvialability)
                     schedulerGraph.set(profUnavailabiliy, String(prof.periodsTaken[lpitrt]) + "Period0");
             }
+
+            let profUsage = 0;
+            for(const periodId of prof.periodsTaken){
+                period = periods.find(p => String(p._id) == periodId);
+                profUsage += period.periodLength * period.periodFrequency
+            }
+            console.log(profUsage);
+            if(profUsage > numberOfDays * periodsPerDay){
+                postMessage({
+                    case : "warning",
+                    message : "The professor " + prof.profName + " has more than " + String(numberOfDays * periodsPerDay) + " periods(They have " + String(profUsage) + "). This makes scheduling impossible."
+                });
+                return postMessage({
+                    case : "abort",
+                    message : "Fix the issue by reducing load on said professor"
+                })  
+            }
         }
         postMessage({
             case: "message",
@@ -92,6 +133,22 @@ ScheduleGenerator = (user,Module) => {
 
                 for (const groupUnavailabiliy of group.unAvialability)
                     schedulerGraph.set(groupUnavailabiliy, String(group.periodsAttended[lpitrt]) + "Period0");
+            }
+            let groupUsage = 0;
+            for(const periodId of group.periodsAttended){
+                period = periods.find(p => String(p._id) == periodId);
+                groupUsage += period.periodLength * period.periodFrequency
+            }
+            console.log(groupUsage);
+            if(groupUsage > numberOfDays * periodsPerDay){
+                postMessage({
+                    case : "warning",
+                    message : "The group " + group.groupName + " has more than " + String(numberOfDays * periodsPerDay) + " periods(They have " + String(profUsage) + "). This makes scheduling impossible."
+                });
+                return postMessage({
+                    case : "abort",
+                    message : "Fix the issue by reducing load on said group"
+                })  
             }
         }
         postMessage({
@@ -181,32 +238,26 @@ ScheduleGenerator = (user,Module) => {
 
                 }
 
-        //Checking if time table is possible
-        let abort = false;
+        //Checking if every node is colorable
+        //i.e. the ban time + set times for the period and its resources don't contradict itself.
         for (const node in schedulerGraph._graph) {
             let inConflict = true;
             for (let periodNumber = 0; periodNumber < numberOfDays * periodsPerDay; periodNumber++)
                 inConflict = inConflict && schedulerGraph.has(node, periodNumber);
             if (inConflict) {
-                periods.find(period => String(period._id) == nodeString.slice(0, 24));
+                period = periods.find(p => String(p._id) == String(node).slice(0, 24));
                 console.log("WARNING:The period " + period.periodName + " causing impossible time table config.");
                 postMessage({
-                    case: "emit",
-                    emit: {
-                        case: "warning",
-                        message: "WARNING:The period " + period.periodName + " causing impossible time table config."
-                    }
+                    case: "warning",
+                    message: "WARNING:The period " + period.periodName + " causing impossible time table config. The ban times/set times defines for this period and its resources make it so that there is no time this period can take place in."
                 });
-
+                return postMessage({
+                    case: "abort",
+                    message: "Please fix the errors above to create a Schedule"
+                });
             }
         }
-        if (abort)
-            return {
-                case: "emit",
-                emit: {
-                    case: "abort"
-                }
-            };
+
     }
 
     postMessage({
@@ -219,9 +270,9 @@ ScheduleGenerator = (user,Module) => {
         var instance = new Module.ant_colony(periodsPerDay, numberOfDays, periods.length, schedulerGraph._vertices.length - (periodsPerDay * numberOfDays));
         for (const period of periods)
             instance.add_lecture(String(period._id), period.periodLength, period.periodFrequency);
-        for (const node of schedulerGraph._vertices){
-            if(node.length > 24)
-                console.log(node,periods.find(period=>String(period._id) == String(node).substr(0,24)).periodName);
+        for (const node of schedulerGraph._vertices) {
+            if (node.length > 24)
+                console.log(node, periods.find(period => String(period._id) == String(node).substr(0, 24)).periodName);
             console.log(schedulerGraph._graph[node]);
             for (const nodeNeighbor in schedulerGraph._graph[node]) {
                 instance.add_edge(String(node), String(nodeNeighbor));
@@ -234,14 +285,14 @@ ScheduleGenerator = (user,Module) => {
         console.timeEnd("haha");
     }
 };
-createMyModule().then(function(Module) {
+createMyModule().then(function (Module) {
     postMessage({
         case: "module_loaded"
     });
     console.log(Module);
-    onmessage = function(message){
+    onmessage = function (message) {
         console.log(message);
         const user = message.data;
-        ScheduleGenerator(user,Module);
+        ScheduleGenerator(user, Module);
     }
-  });
+});

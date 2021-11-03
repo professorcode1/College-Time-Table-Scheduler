@@ -35,6 +35,7 @@ ScheduleGenerator = (user, Module) => {
         professors: profs
     } = user;
     let schedulerGraph = new WorkerGlobalScope.Graph();
+    let integrity = true; 
     //Initialising Graph Below
     {
         postMessage({
@@ -78,12 +79,10 @@ ScheduleGenerator = (user, Module) => {
                     case : "warning",
                     message : "The room " + room.roomName + " has more than " + String(numberOfDays * periodsPerDay) + " periods. This makes scheduling impossible."
                 });
-                return postMessage({
-                    case : "abort",
-                    message : "Fix the issue by reducing load on said room"
-                })  
+                integrity = false;
             }
         }
+
         postMessage({
             case: "message",
             message: "Initialising::Rooms Complete"
@@ -112,10 +111,7 @@ ScheduleGenerator = (user, Module) => {
                     case : "warning",
                     message : "The professor " + prof.profName + " has more than " + String(numberOfDays * periodsPerDay) + " periods(They have " + String(profUsage) + "). This makes scheduling impossible."
                 });
-                return postMessage({
-                    case : "abort",
-                    message : "Fix the issue by reducing load on said professor"
-                })  
+                integrity = false;
             }
         }
         postMessage({
@@ -145,10 +141,7 @@ ScheduleGenerator = (user, Module) => {
                     case : "warning",
                     message : "The group " + group.groupName + " has more than " + String(numberOfDays * periodsPerDay) + " periods(They have " + String(profUsage) + "). This makes scheduling impossible."
                 });
-                return postMessage({
-                    case : "abort",
-                    message : "Fix the issue by reducing load on said group"
-                })  
+                integrity = false;
             }
         }
         postMessage({
@@ -251,14 +244,16 @@ ScheduleGenerator = (user, Module) => {
                     case: "warning",
                     message: "WARNING:The period " + period.periodName + " causing impossible time table config. The ban times/set times defines for this period and its resources make it so that there is no time this period can take place in."
                 });
-                return postMessage({
-                    case: "abort",
-                    message: "Please fix the errors above to create a Schedule"
-                });
+                integrity = false;
             }
         }
 
     }
+    if(!integrity)
+        return postMessage({
+            case:"abort",
+            message:"Please go through all the above generated text and see all the warnings. Fix them to generate schedule"
+        })
 
     postMessage({
         case: "Initalisation_Success",

@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(express.static("public"));
-mongoose.connect("mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority", {
+mongoose.connect("mongodb+srv://admin-Raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority", {
     poolSize: 460,
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -48,7 +48,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: "mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"
+        mongoUrl: "mongodb+srv://admin-Raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"
     })
 }));
 app.use(passport.initialize());

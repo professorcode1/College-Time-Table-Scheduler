@@ -945,6 +945,13 @@ app.post("/parameter", async (req, res) => {
 }
 //time table
 {
+    app.get("/userDatabaseObject", (req,res) => {
+        if( !req.isAuthenticated())
+            return res.redirect("/login");
+        else{
+            return res.send(req.user);
+        }
+    });
 
     app.get("/generateSchedule", async (req, res) => {
         if (!req.isAuthenticated())
@@ -954,14 +961,7 @@ app.post("/parameter", async (req, res) => {
                 message: "Please make some periods first"
             });
         else {
-            var userInfo = new Object();
-            userInfo.periods = req.user.periods;
-            userInfo.groups = req.user.groups;
-            userInfo.rooms = req.user.rooms;
-            userInfo.professors = req.user.professors;
-            userInfo.numberOfDays = req.user.numberOfDays;
-            userInfo.periodsPerDay = req.user.periodsPerDay;
-            return res.render("waiting", { user: JSON.stringify(userInfo) });
+            return res.sendFile( __dirname + "/webPages/waitingAnt.html");
         }
     });
     app.get("/geneticAlgo", async (req, res) => {

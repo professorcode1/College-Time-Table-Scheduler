@@ -60,9 +60,6 @@
 </head>
 
 <body>
-    <div style="display: none;" id="userInfo">
-        <%=user%>
-    </div>
     <div id="particles-js"></div>
     <div class="text" id="main_div">
         <ol id="list">
@@ -208,14 +205,17 @@
         li.appendChild(orangePart);
         ul.appendChild(li);
         window.scrollTo(0, document.body.scrollHeight);
-    }
-    const user = JSON.parse(document.getElementById("userInfo").innerHTML);
-    myWorker.onmessage = function(transmission) {
+    } 
+
+    myWorker.onmessage = async function(transmission) {
         console.log(transmission);
         const message = transmission.data;
         switch (message.case) {
             case "module_loaded":
-                myWorker.postMessage(user);                
+                await $.get("/userDatabaseObject",(data, textStatus, jqXHR) => {
+                    const user = data;
+                    myWorker.postMessage(user);                
+                });
                 break;
             case "complete":
                  console.log(message.coloring);

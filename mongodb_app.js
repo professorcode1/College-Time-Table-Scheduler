@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 app.use(express.static("public"));
-mongoose.connect("mongodb+srv://admin-Raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority", {
+mongoose.connect("mongodb://localhost:27017/collegeScheduler", {
     poolSize: 460,
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -48,8 +48,8 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-        mongoUrl: "mongodb+srv://admin-Raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority"
-    })
+        mongoUrl: "mongodb://localhost:27017/collegeScheduler"
+        })
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -1106,6 +1106,20 @@ app.post("/parameter", async (req, res) => {
             res.redirect("/schedule/" + String(req.user._id));
 
     });
+}
+//Helper Functions
+{
+app.get("scheduleJson",async (req, res) => {
+    const scheduleArray = await User.find({
+        schedule: {
+            $exists: true
+        }
+    }, {
+        instituteName: 1,
+        _id: 1
+    });
+    return res.send("hello world");
+});
 }
 async function deletePeriod(periodId, user) {
     const period = user.periods.find(period => String(period._id) == periodId);

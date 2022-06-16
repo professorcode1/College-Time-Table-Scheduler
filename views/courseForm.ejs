@@ -55,14 +55,14 @@
 
                 Professors teaching : 
                 <%for(const prof of profs){%>
-                    <input type="checkbox" name=<%=prof._id%> id=<%=prof._id%>>
-                        <label for=<%=prof._id%>> <%=prof.profName%> </label>
+                    <input type="checkbox" name=<%='P' + prof._id%> id=<%='P' + prof._id%>>
+                        <label for=<%='P' + prof._id%>> <%=prof.profName%> </label>
                         <%}%> <br> <br>
 
                             Groups Studying : 
                             <%for(const group of groups){%>
-                                <input type="checkbox" name=<%=group._id%> id=<%=group._id%>>
-                                    <label for=<%=group._id%>> <%=group.groupName%> </label>
+                                <input type="checkbox" name=<%='G' + group._id%> id=<%='G' + group._id%>>
+                                    <label for=<%='G' + group._id%>> <%=group.groupName%> </label>
                                     <%}%> <br> <br>
                                         <h2>Fill the below 3 boxes with 0 if you don't wanna use the standard template.
                                         </h2>

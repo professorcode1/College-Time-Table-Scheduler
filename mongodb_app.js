@@ -44,7 +44,7 @@ mongoose.connect("mongodb://localhost:27017/collegeScheduler", {
 });
 
 app.use(session({
-    secret: "You were expecting this string to be a secret used to encrypt cookies, but It was me, DIO!",
+    secret: "You were expecting this string to be a secret used to encrypt cookies, but It was I, DIO!",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
@@ -161,7 +161,7 @@ app.get("/loginFailed", (req, res) => res.render("message", {
 app.get("/login", (req, res) => res.sendFile(__dirname + "/webPages/login.html"));
 app.post("/login", function (req, res) {
     const user = new User({
-        username: req.body.username,
+        username: req.body.email,
         password: req.body.password
     });
     req.login(user, (err) => {
@@ -181,7 +181,7 @@ app.post("/login", function (req, res) {
 app.get("/register", (req, res) => res.sendFile(__dirname + "/webPages/register.html"));
 app.post("/register", (req, res) => {
     User.exists({
-        username: req.body.username
+        username: req.body.email
     }, (err, usernameTaken) => {
         if (usernameTaken) {
             return res.render("message", {
@@ -189,7 +189,7 @@ app.post("/register", (req, res) => {
             });
         } else {
             User.register({
-                username: req.body.username,
+                username: req.body.email,
                 instituteName: req.body.instituteName
             }, req.body.password, (err, user) => {
                 if (!err) {
@@ -565,10 +565,10 @@ app.post("/parameter", async (req, res) => {
 
         for (const key in req.body)
             if (req.body[key] === "on")
-                if (req.user.professors.find(prof => prof._id == key))
-                    taughtBy.push(key); //key is of a professor
+                if (key[0] === 'P')
+                    taughtBy.push(key.substring(1, key.length)); //key is of a professor
                 else
-                    taughtTo.push(key); //key is of a group
+                    taughtTo.push(key.substring(1, key.length)); //key is of a group
         if (taughtTo.length == 0 || taughtBy.length == 0)
             return res.redirect("/course");
         //course is created, but not saved, so that it doesn't create its own collection

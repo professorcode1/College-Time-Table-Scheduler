@@ -9,7 +9,6 @@ const session = require('express-session')
 var MySQLStore = require('express-mysql-session')(session);
 var mysql = require('mysql');
 const util = require('util');
-const e = require("express");
 require('dotenv').config();
 
 function initializePassport(passport, getUserByEmail, getUserById) {
@@ -728,21 +727,21 @@ async function get_groups(university_id) {
             return res.redirect("/login");
         const coloring = req.body;
         console.log(coloring);
-        for(const period of req.user.periods){
-            for(let len = 0 ; len < Number(period.periodLength) ; len++){
-                for(let freq = 0 ; freq < Number(period.periodFrequency) ; freq++){
-                    if(!coloring[String(period._id) + "Period"+String(len) + "Freq" + String(freq)])
-                        console.log("OHHHH NO WHOLLY SHET");
-                }
-            }
-        }
-        await User.updateOne({
-            _id: req.user._id
-        }, {
-            $set: {
-                schedule: req.body
-            }
-        });
+        // for(const period of req.user.periods){
+        //     for(let len = 0 ; len < Number(period.periodLength) ; len++){
+        //         for(let freq = 0 ; freq < Number(period.periodFrequency) ; freq++){
+        //             if(!coloring[String(period._id) + "Period"+String(len) + "Freq" + String(freq)])
+        //                 console.log("OHHHH NO WHOLLY SHET");
+        //         }
+        //     }
+        // }
+        // await User.updateOne({
+        //     _id: req.user._id
+        // }, {
+        //     $set: {
+        //         schedule: req.body
+        //     }
+        // });
         return res.send("done");
     });
     app.get("/viewSchedules", async (req, res) => {

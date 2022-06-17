@@ -22,7 +22,9 @@ CREATE TABLE `university`(
     `days_per_week`  TINYINT NOT NULL DEFAULT 1,
     PRIMARY KEY (`university_id`),
     UNIQUE (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT = 2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+INSERT INTO university(`university_id`,`name`, `email`, `password`, `periods_per_day`, `days_per_week`) 
+VALUES (1, "Thapar", "raghkum2000@gmail.com", "$2b$10$sEzCeYE0vIN7cdVE3wHRdeUHhKSa.erZU1Th9j3M6n/uibb0Hm/5G", 8, 5);
 
 CREATE TABLE `room`(
     `room_id` INT NOT NULL AUTO_INCREMENT,
@@ -115,7 +117,6 @@ CREATE TABLE `period`(
     `length`  TINYINT NOT NULL,
     `frequency`  TINYINT NOT NULL,
     `set_time`  TINYINT DEFAULT NULL,
-    `color`  TINYINT DEFAULT NULL,
     PRIMARY KEY (`period_id`),
     KEY `fk_course_id_idx` (`course_id`),
     KEY `fk_professor_id_idx` (`professor_id`),
@@ -143,6 +144,15 @@ CREATE TABLE `period_ban_times`(
     CONSTRAINT `fk_period_id_1` FOREIGN KEY (`period_id`) REFERENCES `period` (`period_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+CREATE TABLE `period_coloring`(
+    `period_id` INT NOT NULL,
+    `length_value` INT NOT NULL,
+    `frequency_value` INT NOT NULL,
+    `color` TINYINT NOT NULL,
+    PRIMARY KEY(`period_id`, `length_value`,`frequency_value`),
+    KEY `fk_period_id_idx` (`period_id`),
+    CONSTRAINT `fk_period_id_2` FOREIGN KEY (`period_id`) REFERENCES `period` (`period_id`) ON DELETE CASCADE
+);
 
 DELIMITER $$
 CREATE PROCEDURE update_paramterers(

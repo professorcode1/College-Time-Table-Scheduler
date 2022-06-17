@@ -727,32 +727,22 @@ async function get_groups(university_id) {
             return res.redirect("/login");
         const coloring = req.body;
         console.log(coloring);
-        // for(const period of req.user.periods){
-        //     for(let len = 0 ; len < Number(period.periodLength) ; len++){
-        //         for(let freq = 0 ; freq < Number(period.periodFrequency) ; freq++){
-        //             if(!coloring[String(period._id) + "Period"+String(len) + "Freq" + String(freq)])
-        //                 console.log("OHHHH NO WHOLLY SHET");
-        //         }
-        //     }
-        // }
-        // await User.updateOne({
-        //     _id: req.user._id
-        // }, {
-        //     $set: {
-        //         schedule: req.body
-        //     }
-        // });
+        try{
+            let sql_string_r = "";
+            for(let period_Info in coloring){
+                let [period_id, length_value, frequency_value] = period_Info.match(/\d+/g);
+                let color = coloring[period_Info];
+                sql_string_r += `(${period_id}, ${length_value}, ${frequency_value}, ${color}),`;
+            }
+            await async_get_query("INSERT INTO period_coloring VALUES " + sql_string_r.substring(0, sql_string_r.length - 1));
+        }catch(err){
+            console.log(err);
+            return res.send(err);
+        }
         return res.send("done");
     });
     app.get("/viewSchedules", async (req, res) => {
-        const scheduleArray = await User.find({
-            schedule: {
-                $exists: true
-            }
-        }, {
-            instituteName: 1,
-            _id: 1
-        });
+        const scheduleArray = await async_get_query("SELECT `name` AS instituteName, university_id AS _id FROM university");
         res.render("listOfInstitutes", {
             list: scheduleArray
         });
@@ -817,14 +807,8 @@ async function get_groups(university_id) {
     app.get("/viewMySchedule", async (req, res) => {
         if (!req.isAuthenticated())
             res.redirect("/login");
-        const scheduleExists = User.findById(req.user._id, "schedule");
-        if (!scheduleExists)
-            res.render("message", {
-                message: "make a schedule first"
-            });
         else
-            res.redirect("/schedule/" + String(req.user._id));
-
+            res.redirect("/schedule/" + String(req.user.university_id));
     });
 }
 

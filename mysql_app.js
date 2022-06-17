@@ -9,7 +9,6 @@ const session = require('express-session')
 var MySQLStore = require('express-mysql-session')(session);
 var mysql = require('mysql');
 const util = require('util');
-const { Aggregate } = require("mongoose");
 require('dotenv').config();
 
 function initializePassport(passport, getUserByEmail, getUserById) {
@@ -146,7 +145,9 @@ app.post("/register", async (req, res) => {
             email: req.body.email,
             password: hashedPassword
         });
-        res.redirect('/homepage')
+        passport.authenticate("local")(req, res, function () {
+            res.redirect("/homepage");
+        });
     } catch (err) {
         console.log(err);
         res.redirect('/register')
@@ -193,13 +194,13 @@ async function insert_many_hlpr(table_name_and_fields, left_value, right_values)
 function groupBy(list, keyGetter) {
     const map = new Map();
     list.forEach((item) => {
-         const key = keyGetter(item);
-         const collection = map.get(key);
-         if (!collection) {
-             map.set(key, [item]);
-         } else {
-             collection.push(item);
-         }
+        const key = keyGetter(item);
+        const collection = map.get(key);
+        if (!collection) {
+            map.set(key, [item]);
+        } else {
+            collection.push(item);
+        }
     });
     return map;
 }
@@ -296,7 +297,7 @@ async function get_groups(university_id) {
             name: req.body.groupName,
             number_of_students: req.body.groupQuantity
         })).insertId;
-        await insert_many_hlpr(group_ban_times, group_id , unAvialability);
+        await insert_many_hlpr(group_ban_times, group_id, unAvialability);
         return res.redirect("/groupForm");
     });
     app.get("/deleteGroup/:groupId", async (req, res) => {
@@ -391,11 +392,11 @@ async function get_groups(university_id) {
         if (!req.isAuthenticated())
             return res.redirect("/login");
         const data = await async_get_query("CALL courses_information(" + req.user.university_id + ")");
-        const [course_data, professor_data, group_data, ] = data;
+        const [course_data, professor_data, group_data,] = data;
         const professor_map = groupBy(professor_data, ele => ele.course_id);
         const group_map = groupBy(group_data, ele => ele.course_id);
-        for(let course of course_data){
-            course._id =  course.course_id;
+        for (let course of course_data) {
+            course._id = course.course_id;
             course.courseName = course.name;
             course.taughtBy = professor_map.get(course.course_id).map(ele => ele.name);
             course.taughtTo = group_map.get(course.course_id).map(ele => ele.name);
@@ -446,23 +447,23 @@ async function get_groups(university_id) {
     app.get("/deleteCourse/:courseId", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");
-        await async_get_query("DELETE FROM course WHERE course_id = "  + req.params.courseId);
+        await async_get_query("DELETE FROM course WHERE course_id = " + req.params.courseId);
         res.redirect("/course");
     });
 
     app.get("/courseTemplate/:courseId", async (req, res) => {
         if (!req.isAuthenticated())
             return res.redirect("/login");
-        const [[course], taughtBy, taughtTo, rooms, ] = await async_get_query("CALL course_information(" + req.params.courseId + ')');
-        for(let prof of taughtBy){
+        const [[course], taughtBy, taughtTo, rooms,] = await async_get_query("CALL course_information(" + req.params.courseId + ')');
+        for (let prof of taughtBy) {
             prof.profName = prof.name;
             prof._id = prof.professor_id;
         }
-        for(let room of rooms){
+        for (let room of rooms) {
             room.roomName = room.name;
             room._id = room.room_id;
         }
-        for(let group of taughtTo){
+        for (let group of taughtTo) {
             group.groupName = group.name;
             group._id = group.group_id;
         }
@@ -485,63 +486,159 @@ async function get_groups(university_id) {
             return res.redirect("/login");
         //console.log(req.body)
         const {
-            courseId:course_id,
+            courseId: course_id,
             numberOfLectures,
             numberOfTutorials,
             numberOfLabs
         } = req.body;
-        const {name:course_name} = (await async_get_query(`SELECT name FROM course WHERE course_id = ${course_id}`))[0];
+        const { name: course_name } = (await async_get_query(`SELECT name FROM course WHERE course_id = ${course_id}`))[0];
         const period_insert_statement = "INSERT INTO `period`(name, course_id, professor_id, room_id, length, frequency) VALUES "
-        const groups_this_course = await async_get_query(`SELECT group_id, "name" FROM \`group\` WHERE group_id IN (SELECT group_id FROM course_group WHERE course_id = ${course_id})` );
+        const groups_this_course = await async_get_query(`SELECT group_id, \`name\` FROM \`group\` WHERE group_id IN (SELECT group_id FROM course_group WHERE course_id = ${course_id})`);
         const lecture_period_id = (await async_get_query(period_insert_statement + `("${course_name + " Lecture"}", ${course_id}, ${req.body.lecture.profId}, ${req.body.lecture.roomId}, ${req.body.lecture.periodLength}, ${numberOfLectures})`)).insertId;
         await insert_many_hlpr("period_group", lecture_period_id, groups_this_course.map(x => x.group_id));
 
-        const [{taught_to_length}] = await async_get_query(`select count(*) as taught_to_length from course_group where course_id = ${course_id}`);
+        const [{ taught_to_length }] = await async_get_query(`select count(*) as taught_to_length from course_group where course_id = ${course_id}`);
         if (Number(numberOfTutorials) !== 0)
-        for (let lpitrt = 0; lpitrt < taught_to_length; lpitrt++) {
-            const {
-                groupId,
-                roomId,
-                profId,
-                periodLength
-            } = req.body["tutorial" + String(lpitrt)];
+            for (let lpitrt = 0; lpitrt < taught_to_length; lpitrt++) {
+                const {
+                    groupId,
+                    roomId,
+                    profId,
+                    periodLength
+                } = req.body["tutorial" + String(lpitrt)];
+                let periodArgs = {
+                    name: course_name + " Tutorial " + groups_this_course.find(group => group.group_id == groupId).name,
+                    course_id: course_id,
+                    room_id: roomId,
+                    professor_id: profId,
+                    length: periodLength,
+                    frequency: numberOfTutorials,
+                };
+                const period_id = (await async_push_query("INSERT INTO `period` SET ?", periodArgs)).insertId;
+                await async_get_query(`INSERT INTO period_group VALUES (${period_id}, ${groupId})`);
+            }
 
-            let periodArgs = {
-                name: course_name + " Tutorial " + groups_this_course.find(group => group.group_id == groupId).name,
-                course_id: course_id,
-                room_id: roomId,
-                professor_id: profId,
-                length: periodLength,
-                frequency: numberOfTutorials,
-            };
-            const period_id = (await async_push_query("INSERT INTO `period` SET ?", periodArgs)).insertId;
-            await async_get_query(`INSERT INTO period_group VALUES (${period_id}, ${groupId})`);
+        if (Number(numberOfLabs) !== 0)
+            for (let lpitrt = 0; lpitrt < taught_to_length; lpitrt++) {
+                const {
+                    groupId,
+                    roomId,
+                    profId,
+                    periodLength
+                } = req.body["lab" + lpitrt];
+
+                let periodArgs = {
+                    name: course_name + " Lab " + groups_this_course.find(group => group.group_id == groupId).name,
+                    course_id: course_id,
+                    room_id: roomId,
+                    professor_id: profId,
+                    length: periodLength,
+                    frequency: numberOfLabs,
+                };
+                const period_id = (await async_push_query("INSERT INTO `period` SET ?", periodArgs)).insertId;
+                await async_get_query(`INSERT INTO period_group VALUES (${period_id}, ${groupId})`);
+            }
+
+        res.redirect("/courseForm");
+    });
+}
+//Periods
+{
+    app.get("/period/:courseId", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const [[{ name: courseName }], periods_data, group_Data, ban_time_Data,] = await async_get_query(`CALL periods_information(${req.params.courseId})`);
+        // console.log(courseName, periods_data, group_Data, ban_time_Data);
+        const grouped_group_data = groupBy(group_Data, x => x.period_id);
+        const grouped_ban_times = groupBy(ban_time_Data, x => x.period_id)
+        // console.log(grouped_group_data, grouped_ban_times)
+        for (let period of periods_data) {
+            period.groupsAttending = grouped_group_data.get(period._id).map(x => x.name);
+            period.parentCourse = courseName;
+            period.preference = "";
+            // console.log(period);
+            if (period.set_time === null) {
+                const this_period_ban_times = grouped_ban_times.get(period._id);
+                if (this_period_ban_times) {
+                    period.preference = "Ban Times : ";
+                    for (let ban_time_obj of this_period_ban_times)
+                        period.preference += `D${Math.floor(ban_time_obj.ban_time / req.user.periods_per_day) + 1}P${(ban_time_obj.ban_time % req.user.periods_per_day) + 1}`
+                }
+            } else {
+                period.preference = `Set Time : D${Math.floor(period.set_time / req.user.periods_per_day) + 1}P${(period.set_time % req.user.periods_per_day) + 1}`
+            }
         }
-
-    if (Number(numberOfLabs) !== 0)
-        for (let lpitrt = 0; lpitrt < taught_to_length; lpitrt++) {
-            const {
-                groupId,
-                roomId,
-                profId,
-                periodLength
-            } = req.body["lab" + lpitrt];
-
-            let periodArgs = {
-                name: course_name + " Lab " + groups_this_course.find(group => group.group_id == groupId).name,
-                course_id: course_id,
-                room_id: roomId,
-                professor_id: profId,
-                length: periodLength,
-                frequency: numberOfLabs,
-            };
-            const period_id = (await async_push_query("INSERT INTO `period` SET ?", periodArgs)).insertId;
-            await async_get_query(`INSERT INTO period_group VALUES (${period_id}, ${groupId})`);
+        res.render("getPeriod", {
+            periods: periods_data
+        });
+    });
+    app.get("/periodForm/:courseId", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const [[course], taughtBy, taughtTo, rooms,] = await async_get_query("CALL course_information(" + req.params.courseId + ')');
+        for (let prof of taughtBy) {
+            prof.profName = prof.name;
+            prof._id = prof.professor_id;
         }
-
-        res.redirect("/courseTemplate/" + course_id);
+        for (let room of rooms) {
+            room.roomName = room.name;
+            room._id = room.room_id;
+        }
+        for (let group of taughtTo) {
+            group.groupName = group.name;
+            group._id = group.group_id;
+        }
+        res.render("periodForm", {
+            taughtBy: taughtBy,
+            taughtTo: taughtTo,
+            rooms: rooms,
+            numberOfDays: req.user.days_per_week,
+            periodsPerDay: req.user.periods_per_day,
+            courseId: (req.params.courseId)
+        });
+    });
+    app.post("/addPeriod", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        let group_ids = [];
+        for(let key in req.body){
+            if(!isNaN(key) && req.body[key] === "on"){
+                group_ids.push(key);
+            }
+        }
+        const numberOfDays = req.user.days_per_week;
+        const periodsPerDay = req.user.periods_per_day;
+        let ban_times = []
+        for(let iter = 0 ; iter < numberOfDays * periodsPerDay ; iter++){
+            if(req.body["antiTimeSpecified" + iter] === "on"){
+                ban_times.push(iter);
+            }
+        }
+        const use_set_time = req.body.specifyTime && (!isNaN(req.body.timeSpeicifiedDay)) && (!isNaN(req.body.timeSpeicifiedPeriod)) && Number(req.body.periodFrequency) == 1;
+        // console.log(use_set_time, req.body.specifyTime ,!isNaN(req.body.timeSpeicifiedDay) ,!isNaN(req.body.timeSpeicifiedPeriod), );
+        let period_Obj = new Object();
+        period_Obj.name = req.body.periodName;
+        period_Obj.course_id = req.body.courseId;
+        period_Obj.professor_id = req.body.profId;
+        period_Obj.room_id = req.body.roomId;
+        period_Obj.length = req.body.periodLength
+        period_Obj.frequency = req.body.periodFrequency;
+        if(use_set_time){
+            period_Obj.set_time = periodsPerDay * (Number(req.body.timeSpeicifiedDay) - 1) + Number(req.body.timeSpeicifiedPeriod) - 1;
+        }
+        const period_id = (await async_push_query("INSERT INTO `period` SET ?", period_Obj)).insertId;
+        await insert_many_hlpr("period_ban_times", period_id, ban_times);
+        await insert_many_hlpr("period_group", period_id, group_ids);
+        res.redirect("/periodForm/" + String(req.body.courseId));
     });
 
+    app.get("/deletePeriod/:periodId", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const {course_id} = (await async_get_query(`SELECT course_id FROM \`period\` WHERE period_id = ${req.params.periodId}`))[0];
+        await async_get_query(`DELETE FROM \`period\` WHERE period_id = ${req.params.periodId}`);
+        return res.redirect("/period/"+course_id);
+    });
 }
 
 app.listen(process.env.PORT || 3000)

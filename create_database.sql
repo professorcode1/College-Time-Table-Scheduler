@@ -205,5 +205,33 @@ BEGIN
     SELECT * FROM room WHERE university_id IN (SELECT university_id FROM course WHERE course_id = course_id_);
 END $$
 
+
+CREATE PROCEDURE periods_information(
+    course_id_ INT
+)
+BEGIN
+    SELECT `name` FROM course WHERE course_id = course_id_;
+
+    SELECT     
+        `this_course_periods`.`period_id` AS _id,
+        `this_course_periods`.`name` AS periodName,
+        `professor`.`name` AS profTaking,
+        `this_course_periods`.`length` AS periodLength,
+        `this_course_periods`.`frequency` AS periodFrequency,
+        `room`.`name` AS roomUsed,
+        `this_course_periods`.`set_time`
+    FROM (SELECT * FROM `period` WHERE course_id = course_id_) AS `this_course_periods`
+    INNER JOIN professor ON  `this_course_periods`.professor_id = professor.professor_id
+    INNER JOIN room ON `this_course_periods`.room_id = room.room_id;
+
+    SELECT `this_course_periods`.`period_id`, `group`.`name`
+    FROM period_group
+    INNER JOIN (SELECT period_id FROM `period` WHERE course_id = course_id_) AS `this_course_periods`  ON `this_course_periods`.period_id = period_group.period_id 
+    INNER JOIN `group` ON period_group.group_id = `group`.group_id;
+
+    SELECT `this_course_periods`.period_id, period_ban_times.ban_time
+    FROM (SELECT period_id FROM `period` WHERE course_id = course_id_) AS `this_course_periods` 
+    INNER JOIN period_ban_times ON `this_course_periods`.period_id = period_ban_times.period_id;
+END $$
 DELIMITER ; 
 

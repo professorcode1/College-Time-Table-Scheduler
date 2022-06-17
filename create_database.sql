@@ -233,5 +233,57 @@ BEGIN
     FROM (SELECT period_id FROM `period` WHERE course_id = course_id_) AS `this_course_periods` 
     INNER JOIN period_ban_times ON `this_course_periods`.period_id = period_ban_times.period_id;
 END $$
+
+CREATE PROCEDURE entire_university_information(
+    university_id_ INT
+)
+BEGIN
+    
+    SELECT university_id AS _id, periods_per_day AS periodsPerDay, days_per_week AS numberOfDays
+    FROM university WHERE university_id = university_id_;
+
+    SELECT room_id AS _id,  `name` AS roomName, capacity as roomCapacity 
+    FROM room WHERE university_id = university_id_;
+
+    SELECT * FROM room_ban_times WHERE room_id IN (SELECT room_id FROM room WHERE university_id = university_id_);
+
+    SELECT group_id AS _id,  `name` AS groupName, number_of_students as groupQuantity 
+    FROM `group` WHERE university_id = university_id_;
+
+    SELECT * FROM group_ban_times WHERE group_id IN (SELECT group_id FROM `group` WHERE university_id = university_id_);
+
+    SELECT professor_id AS _id,  `name` AS professorName 
+    FROM professor WHERE university_id = university_id_;
+
+    SELECT * FROM professor_ban_times WHERE professor_id IN (SELECT professor_id FROM professor WHERE university_id = university_id_);
+
+    SELECT course_id AS _id, `name` AS courseName FROM course WHERE university_id = university_id_;
+
+    SELECT     
+        `period`.`period_id` AS _id,
+        `period`.`name` AS periodName,
+        `period`.`course_id` AS parentCourse,
+        `period`.`professor_id` AS profTaking,
+        `period`.`room_id` AS roomUsed,
+        `period`.`length` AS periodLength,
+        `period`.`frequency` AS periodFrequency,
+        IFNULL(`period`.`set_time`, -1) AS periodTime 
+    FROM (SELECT course_id FROM course WHERE university_id = university_id_) AS `this_university_courses`
+    INNER JOIN `period` ON `period`.course_id = `this_university_courses`.course_id;  
+
+    SELECT * FROM period_group WHERE period_id IN (
+        SELECT `period`.`period_id`
+        FROM (SELECT course_id FROM course WHERE university_id = university_id_) AS `this_university_courses`
+        INNER JOIN `period` ON `period`.course_id = `this_university_courses`.course_id
+    );
+
+    SELECT * FROM period_ban_times WHERE period_id IN (
+        SELECT `period`.`period_id`
+        FROM (SELECT course_id FROM course WHERE university_id = university_id_) AS `this_university_courses`
+        INNER JOIN `period` ON `period`.course_id = `this_university_courses`.course_id  
+    );
+
+END $$
+
 DELIMITER ; 
 

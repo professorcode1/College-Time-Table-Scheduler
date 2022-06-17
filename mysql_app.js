@@ -9,6 +9,7 @@ const session = require('express-session')
 var MySQLStore = require('express-mysql-session')(session);
 var mysql = require('mysql');
 const util = require('util');
+const e = require("express");
 require('dotenv').config();
 
 function initializePassport(passport, getUserByEmail, getUserById) {
@@ -204,6 +205,7 @@ function groupBy(list, keyGetter) {
     });
     return map;
 }
+extend_id_to_24_char = id => 'a'.repeat(24 - String(id).length) + id;
 
 //Professor
 async function get_professors(university_id) {
@@ -638,6 +640,192 @@ async function get_groups(university_id) {
         const {course_id} = (await async_get_query(`SELECT course_id FROM \`period\` WHERE period_id = ${req.params.periodId}`))[0];
         await async_get_query(`DELETE FROM \`period\` WHERE period_id = ${req.params.periodId}`);
         return res.redirect("/period/"+course_id);
+    });
+}
+//time table
+{
+    app.get("/userDatabaseObject", async (req,res) => {
+        if( !req.isAuthenticated())
+            return res.redirect("/login");
+        const [[user_Object],
+            rooms_data, room_ban_times,
+            groups_data, group_ban_times,
+            professors_data, professor_ban_times, 
+            courses_data, 
+            period_data, period_group, period_ban_times] = await async_get_query(`CALL entire_university_information(${req.user.university_id})`);
+
+        const room_ban_times_grouped = groupBy(room_ban_times, x => x.room_id);
+        const group_ban_times_grouped = groupBy(group_ban_times, x => x.group_id);
+        const professor_ban_times_grouped = groupBy(professor_ban_times, x => x.professor_id);
+        const period_group_grouped = groupBy(period_group, x => x.period_id);
+        const period_ban_times_grouped = groupBy(period_ban_times, x => x.period_id);
+        // console.log(room_ban_times_grouped ,group_ban_times_grouped ,professor_ban_times_grouped ,period_group_grouped ,period_ban_times_grouped);
+        const room_map = new Map();
+        const professor_map = new Map();
+        const group_map = new Map();
+        for(let room of rooms_data){
+            room_map.set(room._id, room); 
+            if(room_ban_times_grouped.has(room._id)){
+                room.unAvialability = room_ban_times_grouped.get(room._id).map(x => x.ban_time);
+            }else{
+                room.unAvialability = [];
+            }
+            room.periodsUsedIn = [];
+        }
+
+        for(let group of groups_data){
+            group_map.set(group._id, group); 
+            if(group_ban_times_grouped.has(group._id)){
+                group.unAvialability = group_ban_times_grouped.get(group._id).map(x => x.ban_time);
+            }else{
+                group.unAvialability = [];
+            }
+            group.periodsAttended = [];
+        }
+
+        for(let professor of professors_data){
+            professor_map.set(professor._id, professor); 
+            if(professor_ban_times_grouped.has(professor._id)){
+                professor.unAvialability = professor_ban_times_grouped.get(professor._id).map(x => x.ban_time);
+            }else{
+                professor.unAvialability = [];
+            }
+            professor.periodsTaken = [];
+        }
+        for(let period of period_data){
+            period.groupsAttending = period_group_grouped.get(period._id).map(x => x.group_id);
+            if(period_ban_times_grouped.has(period._id))
+                period.periodAntiTime = period_ban_times_grouped.get(period._id).map(x => x.ban_time);
+            else
+                period.periodAntiTime = [];
+            period._id = extend_id_to_24_char(period._id);
+            room_map.get(period.roomUsed).periodsUsedIn.push(period._id);
+            professor_map.get(period.profTaking).periodsTaken.push(period._id);
+            for(let group_id of period.groupsAttending)
+                group_map.get(group_id).periodsAttended.push(period._id);
+        }
+        user_Object.rooms = rooms_data;
+        user_Object.professors = professors_data;
+        user_Object.groups = groups_data;
+        user_Object.courses = courses_data;
+        user_Object.periods = period_data;
+        res.send(user_Object);
+    });
+
+    app.get("/generateSchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const {periods_made} = (await async_get_query(`SELECT EXISTS(SELECT * FROM \`period\` WHERE course_id IN (SELECT course_id FROM course WHERE university_id = ${req.user.university_id})) AS periods_made`))[0];
+        if(periods_made)    
+            return res.sendFile( __dirname + "/webPages/waitingAnt.html");
+        else {
+            return res.render("message", { message : "Please make some periods first"})
+        }
+    });
+ 
+    app.post("/generateSchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            return res.redirect("/login");
+        const coloring = req.body;
+        console.log(coloring);
+        for(const period of req.user.periods){
+            for(let len = 0 ; len < Number(period.periodLength) ; len++){
+                for(let freq = 0 ; freq < Number(period.periodFrequency) ; freq++){
+                    if(!coloring[String(period._id) + "Period"+String(len) + "Freq" + String(freq)])
+                        console.log("OHHHH NO WHOLLY SHET");
+                }
+            }
+        }
+        await User.updateOne({
+            _id: req.user._id
+        }, {
+            $set: {
+                schedule: req.body
+            }
+        });
+        return res.send("done");
+    });
+    app.get("/viewSchedules", async (req, res) => {
+        const scheduleArray = await User.find({
+            schedule: {
+                $exists: true
+            }
+        }, {
+            instituteName: 1,
+            _id: 1
+        });
+        res.render("listOfInstitutes", {
+            list: scheduleArray
+        });
+    });
+    app.get("/schedule/:userId", async (req, res) => {
+        id = req.params.userId;
+        const user = await User.findById(id);
+        if (!user)
+            return res.render("message", {
+                message: "User does not exist"
+            });
+        let sendTable = new Map();
+        const {
+            numberOfDays,
+            periodsPerDay
+        } = user;
+        for (const group of user.groups) {
+            let table = new Array(numberOfDays);
+            for (let i = 0; i < numberOfDays; i++)
+                table[i] = new Array(periodsPerDay);
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    table[i][j] = "Free Period";
+            for (const periodId of group.periodsAttended) {
+                const period = user.periods.find(period => String(period._id) == periodId);
+                //console.log(periodId,period);
+                for (let len = 0; len < Number(period.periodLength); len++)
+                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
+                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
+                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
+                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
+                    }
+            }
+            sendTable.set(group.groupName, table);
+        }
+        for (const prof of user.professors) {
+            let table = new Array(numberOfDays);
+            for (let i = 0; i < numberOfDays; i++)
+                table[i] = new Array(periodsPerDay);
+            for (let i = 0; i < numberOfDays; i++)
+                for (let j = 0; j < periodsPerDay; j++)
+                    table[i][j] = "Free Period";
+            for (const periodId of prof.periodsTaken) {
+                const period = user.periods.find(period => String(period._id) == periodId);
+                //console.log(periodId,period);
+                for (let len = 0; len < Number(period.periodLength); len++)
+                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
+                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
+                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
+                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
+                    }
+            }
+            sendTable.set(prof.profName, table);
+        }
+        //console.log(sendTable);
+        res.render("timetable", {
+            sendTable: sendTable,
+            numberOfDays: numberOfDays,
+            periodsPerDay: periodsPerDay
+        });
+    });
+    app.get("/viewMySchedule", async (req, res) => {
+        if (!req.isAuthenticated())
+            res.redirect("/login");
+        const scheduleExists = User.findById(req.user._id, "schedule");
+        if (!scheduleExists)
+            res.render("message", {
+                message: "make a schedule first"
+            });
+        else
+            res.redirect("/schedule/" + String(req.user._id));
+
     });
 }
 

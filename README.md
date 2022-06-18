@@ -22,18 +22,21 @@ The paper used to impliment the graph coloring is written by Alain Hertz and Nic
 
 * * *
 
-To use this, follow the below steps.
-
-- Git clone this repo
-- Make sure you have node installed
-- run `npm install` to get all the node modules
+To use locally, follow the below steps.
+- run `npm install`
+### MongoDB Server
 - replace the string "mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority" on lines 41 and 52 with "mongodb://localhost:27017/collegeScheduler"
-- have a mongod server on your local machine up and running
-- run `node app.js` to run the application
-- open any browser and goto `localhost:3000` to use the application.
+- run `node mongodb_app.js` to run the application and use it on `localhost:3000`
+
+### MySQL Server
+- Create .env file with MYSQLPASS, MYSQL_USERNAME environment variables set to access you local mysql server
+- run the `create_database.sql` script in your sql server.
+- run `node mysql_app.js` to run the application and use it on `localhost:3000`
 
 It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in your linux terminal(with the mongodb server running) (you will need to have `mongodb-tools-bin` installed)
 `mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
+
+To load the data into the sql server, run `node mongodb_json_to_sql.js`. In the mongodb_json_to_sql.js change the first parameter of the main call to the university_id of your sql record on which you wanna load the data.
 Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset(see the section_TT.pdf to see the bases)
 
 * * *
@@ -44,15 +47,7 @@ Here's how the application works.
 
 ## Database
 
-In the app.js file, only the logic for interacting with the database is written. It took 1200 lines total to implement the database queries. The database schema is as follows.
-
-- A `user` constitues of 3 types of resources. `Professors`, `Rooms` and `groups`.
-- Each resource can be assosiated ban-time. Times where said resource cannot have/be used for a period. Professor who need to go home early, rooms reserved for other periods. Lunch break of student groups.
-- `User` also constitutes `courses` which are a combination of `professors`(those who teach it) and `groups`(those who learn it). A course is not useful for the generation of the schedule however it helps the user organise and query the data more easily.
-- A `course` is composed of `periods`. A period can have a set-time i.e. when a period needs to happen. For example, egnineering drawing tutorial needs to happen on monday morning period 2 as that is the only time the patial professor is available. Also if you choose not to assign a set-time to a period, you can also assign ban-time's. These define when a period can't happen. I.e. manufacturing lab cannot happen before lunch as the students may pass out from hunger. You can also choose not to define either.
-- If the `user` generates a schedule then said user also has one schedule object. The schedule is a JSON object that maps all periods to a number(day and time) such that they don't have any conflicting resources and don't break the contraints set by the set-time/ban-time.
-
-The database queries should be done in the form of procedures and functions implemented inside the database(instead of in the application). I didn't know this when I made this project as it was long before semester four started and hence I didn't yet start studying DBMS. This is also why I used MongoDB instead of MySQL which would have been the far more sensible choise (226 out of the 1278 lines in app.js are so that resources can be deletes without compromising the database integrity. To have the same effect in MySQL the only thing that would have to be done was to include `ON DELETE CASCADE` for all primary keys in the schema of all the relations). At the time of this project I simply did not know SQL.
+<img alt="preview" src="ER_Dig.jpg" width="90%">
 
 * * *
 

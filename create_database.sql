@@ -295,5 +295,40 @@ BEGIN
 
 END $$
 
+CREATE PROCEDURE view_schedule( 
+    university_id_ INT
+)
+BEGIN
+    
+    SELECT professor_id, `name` FROM professor WHERE university_id = university_id_;
+
+    SELECT 
+        `this_university_professors`.professor_id, 
+        `period`.`name`, 
+        -- period_coloring.period_id, 
+        -- period_coloring.length_value,
+        -- period_coloring.frequency_value,
+        period_coloring.color
+    FROM  (SELECT professor_id FROM professor WHERE university_id = university_id_) AS `this_university_professors`
+    INNER JOIN `period` ON `period`.professor_id = `this_university_professors`.professor_id
+    INNER JOIN period_coloring ON `period`.period_id = period_coloring.period_id;
+
+    SELECT group_id, `name` FROM `group` WHERE university_id = university_id_;
+
+    SELECT 
+        `this_university_groups`.group_id,
+        `period`.`name`, 
+        -- period_coloring.period_id, 
+        -- period_coloring.length_value,
+        -- period_coloring.frequency_value,
+        period_coloring.color
+    FROM (SELECT group_id FROM `group` WHERE university_id = university_id_) AS `this_university_groups`
+    INNER JOIN period_group ON period_group.group_id = `this_university_groups`.group_id
+    INNER JOIN `period` ON `period`.period_id = period_group.period_id
+    INNER JOIN period_coloring ON period_coloring.period_id = `period`.period_id;
+
+END $$
+
+
 DELIMITER ; 
 

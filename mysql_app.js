@@ -206,6 +206,7 @@ function groupBy(list, keyGetter) {
 }
 extend_id_to_24_char = id => 'a'.repeat(24 - String(id).length) + id;
 
+
 //Professor
 async function get_professors(university_id) {
     const professors = await async_get_query("SELECT * from professor WHERE university_id = " + university_id);
@@ -748,56 +749,45 @@ async function get_groups(university_id) {
         });
     });
     app.get("/schedule/:userId", async (req, res) => {
-        id = req.params.userId;
-        const user = await User.findById(id);
-        if (!user)
-            return res.render("message", {
-                message: "User does not exist"
-            });
-        let sendTable = new Map();
+        const [prof_data, prof_views, group_data, group_views, ] = await async_get_query(`CALL view_schedule(${req.params.userId})`);
+        const prof_views_grouped = groupBy(prof_views, x => x.professor_id);
+        const group_views_grouped = groupBy(group_views, x => x.group_id);
         const {
             numberOfDays,
             periodsPerDay
-        } = user;
-        for (const group of user.groups) {
+        } = (await async_get_query(`SELECT days_per_week AS numberOfDays, periods_per_day AS periodsPerDay FROM university WHERE university_id = ${req.params.userId}`))[0];
+        let sendTable = new Map();
+        for(let prof of prof_data){
             let table = new Array(numberOfDays);
             for (let i = 0; i < numberOfDays; i++)
                 table[i] = new Array(periodsPerDay);
             for (let i = 0; i < numberOfDays; i++)
                 for (let j = 0; j < periodsPerDay; j++)
                     table[i][j] = "Free Period";
-            for (const periodId of group.periodsAttended) {
-                const period = user.periods.find(period => String(period._id) == periodId);
-                //console.log(periodId,period);
-                for (let len = 0; len < Number(period.periodLength); len++)
-                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
-                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
-                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
-                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
-                    }
+            if(prof_views_grouped.has(prof.professor_id)){
+                for(let period of prof_views_grouped.get(prof.professor_id)){
+                    // console.log(period);
+                    table[Math.floor(period.color / periodsPerDay)][period.color % periodsPerDay] = period.name; 
+                }
             }
-            sendTable.set(group.groupName, table);
+            sendTable.set(prof.name, table);
         }
-        for (const prof of user.professors) {
+        for(let group of group_data){
             let table = new Array(numberOfDays);
             for (let i = 0; i < numberOfDays; i++)
                 table[i] = new Array(periodsPerDay);
             for (let i = 0; i < numberOfDays; i++)
                 for (let j = 0; j < periodsPerDay; j++)
                     table[i][j] = "Free Period";
-            for (const periodId of prof.periodsTaken) {
-                const period = user.periods.find(period => String(period._id) == periodId);
-                //console.log(periodId,period);
-                for (let len = 0; len < Number(period.periodLength); len++)
-                    for (let freq = 0; freq < Number(period.periodFrequency); freq++) {
-                        const time = user.schedule[String(periodId) + "Period" + len + "Freq" + freq];
-                        //console.log(user.schedule[String(periodId)+"Period"+len+"Freq"+freq]);
-                        table[Math.floor(time / periodsPerDay)][time % periodsPerDay] = period.periodName;
-                    }
+            if(group_views_grouped.has(group.group_id)){
+                for(let period of group_views_grouped.get(group.group_id)){
+                    table[Math.floor(period.color / periodsPerDay)][period.color % periodsPerDay] = period.name; 
+                }
             }
-            sendTable.set(prof.profName, table);
+            sendTable.set(group.name, table);
         }
-        //console.log(sendTable);
+        // console.log(group_views_grouped);
+        // return res.send({prof_data, prof_views, group_data, group_views});
         res.render("timetable", {
             sendTable: sendTable,
             numberOfDays: numberOfDays,

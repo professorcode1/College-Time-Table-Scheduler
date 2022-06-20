@@ -52,7 +52,7 @@ var options = {
     port: 3306,
     user: process.env.MYSQL_USERNAME,
     password: process.env.MYSQLPASS,
-    database: 'collegeScheduler'
+    database: process.env.DATABASE_NAME
 };
 var connection = mysql.createConnection(options);
 

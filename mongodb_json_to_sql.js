@@ -5,11 +5,11 @@ require('dotenv').config();
 const util = require('util');
 
 var options = {
-    host: 'localhost',
+    host: 'sql6.freemysqlhosting.net',
     port: 3306,
     user: process.env.MYSQL_USERNAME,
     password: process.env.MYSQLPASS,
-    database: 'collegeScheduler'
+    database: process.env.DATABASE_NAME
 };
 var connection = mysql.createConnection(options);
 

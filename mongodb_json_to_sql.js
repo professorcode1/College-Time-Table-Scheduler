@@ -5,8 +5,8 @@ require('dotenv').config();
 const util = require('util');
 
 var options = {
-    host: 'sql6.freemysqlhosting.net',
-    port: 3306,
+    host: process.env.MYSQL_HOST,
+    port: process.env.MYSQL_PORT,
     user: process.env.MYSQL_USERNAME,
     password: process.env.MYSQLPASS,
     database: process.env.DATABASE_NAME

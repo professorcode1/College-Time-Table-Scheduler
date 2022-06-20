@@ -735,7 +735,7 @@ async function get_groups(university_id) {
                 let color = coloring[period_Info];
                 sql_string_r += `(${period_id}, ${length_value}, ${frequency_value}, ${color}),`;
             }
-            await async_get_query("DELETE FROM period_coloring");
+            await async_get_query(`CALL delete_university_schedule(${req.user.university_id})`);
             await async_get_query("INSERT INTO period_coloring VALUES " + sql_string_r.substring(0, sql_string_r.length - 1));
         }catch(err){
             console.log(err);

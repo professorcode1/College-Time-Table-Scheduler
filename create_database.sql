@@ -295,6 +295,18 @@ BEGIN
 
 END $$
 
+CREATE PROCEDURE delete_university_schedule(
+    university_id_ INT
+)
+BEGIN
+    DELETE FROM period_coloring WHERE period_id IN 
+        (
+            SELECT `period`.`period_id`
+            FROM (SELECT course_id FROM course WHERE university_id = university_id_) AS `this_university_courses`
+            INNER JOIN `period` ON `period`.course_id = `this_university_courses`.course_id
+        ); 
+END $$
+
 CREATE PROCEDURE view_schedule( 
     university_id_ INT
 )

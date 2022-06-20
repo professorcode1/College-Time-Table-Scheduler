@@ -48,8 +48,8 @@ async function try_catch(promise) {
 }
 
 var options = {
-    host: 'sql6.freemysqlhosting.net',
-    port: 3306,
+    host: process.env.MYSQL_HOST,
+    port: process.env.MYSQL_PORT,
     user: process.env.MYSQL_USERNAME,
     password: process.env.MYSQLPASS,
     database: process.env.DATABASE_NAME
@@ -735,6 +735,7 @@ async function get_groups(university_id) {
                 let color = coloring[period_Info];
                 sql_string_r += `(${period_id}, ${length_value}, ${frequency_value}, ${color}),`;
             }
+            await async_get_query("DELETE FROM period_coloring");
             await async_get_query("INSERT INTO period_coloring VALUES " + sql_string_r.substring(0, sql_string_r.length - 1));
         }catch(err){
             console.log(err);

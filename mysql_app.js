@@ -803,4 +803,6 @@ async function get_groups(university_id) {
     });
 }
 
-app.listen(process.env.PORT || 3000)
+app.listen(process.env.PORT || 3000, () => {
+    console.log("listening")
+})

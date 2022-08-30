@@ -144,7 +144,7 @@ const userSchema = new mongoose.Schema({
         default: new Array()
     }
 });
-userSchema.plugin(passportLocalMongoose);
+userSchema.plugin(passportLocalMongoose, {usernameField:"email"});
 
 const User = new mongoose.model("user", userSchema);
 passport.use(User.createStrategy());
@@ -161,7 +161,7 @@ app.get("/loginFailed", (req, res) => res.render("message", {
 app.get("/login", (req, res) => res.sendFile(__dirname + "/webPages/login.html"));
 app.post("/login", function (req, res) {
     const user = new User({
-        username: req.body.email,
+        email: req.body.email,
         password: req.body.password
     });
     req.login(user, (err) => {
@@ -180,16 +180,17 @@ app.post("/login", function (req, res) {
 
 app.get("/register", (req, res) => res.sendFile(__dirname + "/webPages/register.html"));
 app.post("/register", (req, res) => {
+    // console.log(req.body)
     User.exists({
-        username: req.body.email
-    }, (err, usernameTaken) => {
-        if (usernameTaken) {
+        email: req.body.email
+    }, (err, emailTaken) => {
+        if (emailTaken) {
             return res.render("message", {
-                message: "Sorry, username taken"
+                message: "Sorry, email taken"
             });
         } else {
             User.register({
-                username: req.body.email,
+                email: req.body.email,
                 instituteName: req.body.instituteName
             }, req.body.password, (err, user) => {
                 if (!err) {
@@ -198,7 +199,9 @@ app.post("/register", (req, res) => {
                     });
                 } else {
                     console.log(err);
-                    res.redirect("/");
+                    res.render("message", {
+                        message: "Sorry, some internal error has occured"
+                    });
                 }
             });
         }

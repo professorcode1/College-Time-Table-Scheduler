@@ -35,8 +35,11 @@ To use locally, follow the below steps.
 
 It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in your linux terminal(with the mongodb server running) (you will need to have `mongodb-tools-bin` installed)
 `mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
+Now goto your mongodb database and change username field for all documents to email. 
 
 To load the data into the sql server, run `node mongodb_json_to_sql.js`. In the mongodb_json_to_sql.js change the first parameter of the main call to the university_id of your sql record on which you wanna load the data.
+
+
 Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset(see the section_TT.pdf to see the bases)
 
 * * *

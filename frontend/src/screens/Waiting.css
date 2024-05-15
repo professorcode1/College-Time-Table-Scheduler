@@ -1,0 +1,61 @@
+.svg-container {
+    background: #23333f;
+    padding: 3em;
+}
+.svg-container svg {
+    max-width: 500px;
+}
+.line {
+    fill: none;
+    stroke: #00b3e3;
+    stroke-miterlimit: 10;
+    stroke-width: 0.5;
+    animation: line-pulse 5s ease infinite;
+    -moz-animation: line-pulse 5s ease infinite;
+   /* Firefox */
+    -webkit-animation: line-pulse 5s ease infinite;
+   /* Safari and Chrome */
+    -o-animation: line-pulse 5s ease infinite;
+   /* Opera */
+}
+.circle {
+    fill: transparent;
+    transition: fill 300ms ease;
+}
+.blue-bg {
+    fill: #00b3e3;
+    animation: circle-pulse 10s linear infinite;
+    -moz-animation: circle-pulse 10s linear infinite;
+   /* Firefox */
+    -webkit-animation: circle-pulse 10s linear infinite;
+   /* Safari and Chrome */
+    -o-animation: circle-pulse 10s linear infinite;
+   /* Opera */
+    -webkit-animation-delay: 3s;
+   /* Chrome, Safari, Opera */
+    animation-delay: 3s;
+}
+@keyframes circle-pulse {
+    0%, 100% {
+        fill: #00b3e3;
+   }
+    50% {
+        fill: #fff;
+   }
+}
+@keyframes line-pulse {
+    0%, 100% {
+        stroke: #00b3e3;
+   }
+    50% {
+        stroke: #fff;
+   }
+}
+@keyframes svg-pulse {
+    0%, 100% {
+        stroke: #00b3e3;
+   }
+    50% {
+        stroke: #fff;
+   }
+}

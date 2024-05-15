@@ -1,0 +1,31 @@
+{
+  "files": {
+    "main.css": "/static/css/main.f8bfc0f8.css",
+    "main.js": "/static/js/main.4696271a.js",
+    "static/js/453.8ab44547.chunk.js": "/static/js/453.8ab44547.chunk.js",
+    "static/media/Flight Simulator.gif": "/static/media/Flight Simulator.5923c8c00b471d4559a8.gif",
+    "static/media/College Scheduler Home page.png": "/static/media/College Scheduler Home page.7272bee297d0e7d44520.png",
+    "static/media/College Scheduler Landing Page.png": "/static/media/College Scheduler Landing Page.7ddf2db0b2d181ea8979.png",
+    "static/media/Intel Hack Plot.png": "/static/media/Intel Hack Plot.83b8393931dc4bfdb66e.png",
+    "static/media/Me with Cat Cropped.jpg": "/static/media/Me with Cat Cropped.96f821ce49c659c5d674.jpg",
+    "static/media/College Scheduler Scheduling page.png": "/static/media/College Scheduler Scheduling page.f93618322e51b7622c5c.png",
+    "static/media/College Scheduler Course Page.png": "/static/media/College Scheduler Course Page.886273d5591422f1e9f1.png",
+    "static/media/MLSC Register Page.png": "/static/media/MLSC Register Page.34c04c4a9b4f06a7b390.png",
+    "static/media/MLSC Leaderboard Page.png": "/static/media/MLSC Leaderboard Page.ff51a07c62a501416b41.png",
+    "static/media/MLSC Question Page.png": "/static/media/MLSC Question Page.6e5af7236b9afa9636bc.png",
+    "static/media/Marat Sans Bold.otf": "/static/media/Marat Sans Bold.f0c1601eb1d29daa51db.otf",
+    "static/media/Marat Sans Regular.otf": "/static/media/Marat Sans Regular.5a961b695b18381fe68e.otf",
+    "static/media/MLSC Landing Page.png": "/static/media/MLSC Landing Page.15087aa6087264056aff.png",
+    "static/media/RammettoOne-Regular.ttf": "/static/media/RammettoOne-Regular.f7c15da7bdd97cf2be0c.ttf",
+    "static/media/instagram logo.png": "/static/media/instagram logo.53505072d690c460b44c.png",
+    "static/media/LinkedIn_icon.png": "/static/media/LinkedIn_icon.c8108f6744cce228abf5.png",
+    "index.html": "/index.html",
+    "main.f8bfc0f8.css.map": "/static/css/main.f8bfc0f8.css.map",
+    "main.4696271a.js.map": "/static/js/main.4696271a.js.map",
+    "453.8ab44547.chunk.js.map": "/static/js/453.8ab44547.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f8bfc0f8.css",
+    "static/js/main.4696271a.js"
+  ]
+}

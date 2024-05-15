@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        @font-face {
+            font-family: hacker_font;
+            src: url(Roboto_Mono/RobotoMono-VariableFont_wght.ttf);
+        }
+
+        @font-face {
+            font-family: terminal;
+            src: url(modeseven-font/Modeseven-L3n5.ttf);
+        }
+
+        body,
+        html {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+            vertical-align: bottom;
+        }
+
+        #particles-js {
+            position: fixed;
+            width: 105%;
+            height: 105%;
+            background: black
+        }
+
+        .text {
+            position: absolute;
+            /* top: 50%; */
+            /* right: 50%; */
+            /* transform: translate(50%, -50%); */
+            color: white;
+            max-width: 90%;
+            padding: 2em 3em;
+            background: rgba(0, 0, 0, 0.4);
+            text-shadow: 0px 0px 2px #131415;
+            font-family: terminal;
+            letter-spacing: 4px;
+        }
+
+        li {
+            color: white;
+            margin: 2px;
+        }
+    </style>
+    <title>Waiting...</title>
+</head>
+
+<body>
+    <div id="particles-js"></div>
+    <div class="text" id="main_div">
+        <ol id="list">
+        </ol>
+    </div>
+</body>
+<script
+  src="https://code.jquery.com/jquery-3.6.0.js"
+  integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+  crossorigin="anonymous"></script>
+<script >
+    var myWorker = new Worker('ant-colonoy-webambly/scheduler.js');
+    var coloring;
+    print_message = (message) => {
+        switch (message.case) {
+            case "message":
+                initialising(message.message);
+                break;
+            case "Initalisation_Success":
+                Initalisation_Success(message.message);
+                window.scrollTo(0, document.body.scrollHeight);
+                break;
+            case "warning":
+                warning(message.message);
+                break;
+            case "abort":
+                abort(message.message);
+                break;
+            case "algorithm_update":
+                updateCounters(message);
+                break;
+            case "complete":
+                complete();
+                break;
+            case "failure":
+                failure();
+                break;
+            default:
+                console.log(message);
+                break;
+        }
+    };
+    function failure() {
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:yellow");
+        greenPart.appendChild(document.createTextNode("FAILURE::The algorithm has failed. You can see the best schedule it has generated, but it will have errors.Also since the schedule is generated here at front-end using a non-deterministic algorithm you can just reload to roll the dice again."));
+        document.getElementById("main_div").appendChild(greenPart);
+    }
+    function database_update_failure() {
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:yellow");
+        greenPart.appendChild(document.createTextNode("FAILURE::The schedule generated but the request to update database could not complete"));
+        document.getElementById("main_div").appendChild(greenPart);
+    }
+    function complete() {
+        // var xhr = new XMLHttpRequest();
+        // xhr.open("POST", "/generateSchedule", true);
+        // xhr.setRequestHeader('Content-Type', 'application/json');
+        // console.log("what imma send",coloring);
+        // xhr.send(JSON.stringify("coloring"));
+        $.post("/collegeSchduler/generateSchedule",coloring,(status) =>{
+            console.log(status);
+            if(status == "done"){
+                document.getElementById("main_div").appendChild(document.createElement("br"));
+                var h3 = document.createElement("h3");
+                var a = document.createElement("a");
+                a.setAttribute("href", "/collegeSchduler?view_schedules=true");
+                a.innerHTML = " here ";
+                h3.appendChild(document.createTextNode("Click "));
+                h3.appendChild(a);
+                h3.appendChild(document.createTextNode(" to redirect to your schedule"));
+                document.getElementById("main_div").appendChild(h3);
+                window.scrollTo(0, document.body.scrollHeight);
+            }else 
+            database_update_failure();
+        });
+
+    }
+    function updateCounters(params) {
+        document.getElementById("generationCounter").innerHTML = params.generation;
+        document.getElementById("conflictCounter").innerHTML = params.conflicts;
+        document.getElementById("leastConflictCounter").innerHTML = params.leastConflicts;
+        //window.scrollTo(0, document.body.scrollHeight);
+    }
+    function abort(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("h1");
+        greenPart.setAttribute("style", "color:red");
+        greenPart.appendChild(document.createTextNode("ABORTING :: " + message));
+        li.appendChild(greenPart);
+        ul.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function warning(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("h2");
+        greenPart.setAttribute("style", "color:white");
+        greenPart.appendChild(document.createTextNode(message));
+        li.appendChild(greenPart);
+        ul.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function Initalisation_Success(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("h3");
+        greenPart.setAttribute("style", "color:rgb(0,255,122)");
+        greenPart.appendChild(document.createTextNode(message));
+        li.appendChild(greenPart);
+        ul.appendChild(li);
+        var mainDiv = document.getElementById("main_div");
+        var updateCounter = document.createElement("h1");
+        var generationCounter = document.createElement("span");
+        generationCounter.setAttribute("id", "generationCounter");
+        var conflictCounter = document.createElement("span");
+        conflictCounter.setAttribute("id", "conflictCounter");
+        var leastConflictCounter = document.createElement("span");
+        leastConflictCounter.setAttribute("id", "leastConflictCounter");
+        updateCounter.appendChild(document.createTextNode("Iteration::"));
+        updateCounter.appendChild(generationCounter);
+        updateCounter.appendChild(document.createElement("br"));
+        updateCounter.appendChild(document.createTextNode("Conflict Counter::"));
+        updateCounter.appendChild(conflictCounter);
+        updateCounter.appendChild(document.createElement("br"));
+        updateCounter.appendChild(document.createTextNode("Least Conflict::"));
+        updateCounter.appendChild(leastConflictCounter);
+        mainDiv.appendChild(updateCounter);
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+    function initialising(message) {
+        var ul = document.getElementById("list");
+        var li = document.createElement("li");
+        var greenPart = document.createElement("span");
+        greenPart.setAttribute("style", "color:" + neonGreen);
+        greenPart.appendChild(document.createTextNode(message.substr(0, 12)));
+        var orangePart = document.createElement("span");
+        orangePart.setAttribute("style", "color:" + neonOrange);
+        orangePart.appendChild(document.createTextNode(message.substr(14, message.length - 1)));
+        li.appendChild(greenPart);
+        li.appendChild(document.createTextNode("::"));
+        li.appendChild(orangePart);
+        ul.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+    } 
+
+    myWorker.onmessage = async function(transmission) {
+        console.log(transmission);
+        const message = transmission.data;
+        switch (message.case) {
+            case "module_loaded":
+                await $.get("/collegeSchduler/userDatabaseObject",(data, textStatus, jqXHR) => {
+                    const user = data;
+                    myWorker.postMessage(user);                
+                });
+                break;
+            case "complete":
+                 console.log(message.coloring);
+                 coloring = message.coloring;
+                break;
+            default:
+                break;
+        }
+        print_message(message);
+    }
+    const neonGreen = "#39FF14";
+    const neonOrange = "#FF6700"
+
+</script>
+<script src="particles.js-master/particles.js">
+</script>
+<script src="/particles.js-master/demo/js/app.js">
+</script>
+
+</html>

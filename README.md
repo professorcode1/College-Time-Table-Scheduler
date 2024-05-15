@@ -27,7 +27,7 @@ To use locally, follow the below steps.
 - Copy paste the build/static/js, css,media into the build in backend
 - In backend folder run build, rename src folder to something else, move all files and folders in dist outside dist
 - Copy thapar.json from origina source folder/college scheduler into the new src/college scheduler.
-- Create .env file with the following variables => (PORT, WEBTELDBNAME, DBPASS, DBHOST, DBPORT, DBUSER, CollegeScheudlerDBName, JWTEncryptionToken)
+- Create .env file with the following variables => (PORT, DBPASS, DBHOST, DBPORT, DBUSER, CollegeScheudlerDBName, JWTEncryptionToken)
 - run node index.js
 
 ### Do not use this in production, there no row level security so any user can hit the delete end point to delete any resource irrgardless of if it belongs to them or not. 

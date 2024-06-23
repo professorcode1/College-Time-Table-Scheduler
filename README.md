@@ -23,24 +23,14 @@ The paper used to impliment the graph coloring is written by Alain Hertz and Nic
 * * *
 
 To use locally, follow the below steps.
-- run `npm install`
-### MongoDB Server
-- replace the string "mongodb+srv://admin-raghav:" + encodeURIComponent(process.env.MONGOCLUSTERPASS) + "@cluster0.tbblr.mongodb.net/CollegeScheduler?retryWrites=true&w=majority" on lines 41 and 52 with "mongodb://localhost:27017/collegeScheduler"
-- run `node mongodb_app.js` to run the application and use it on `localhost:3000`
+- Goto frontend and run the build command, make sure the URLBase in src/utils/URLBase.ts is not set to localhost.
+- Copy paste the build/static/js, css,media into the build in backend
+- In backend folder run build, rename src folder to something else, move all files and folders in dist outside dist
+- Copy thapar.json from origina source folder/college scheduler into the new src/college scheduler.
+- Create .env file with the following variables => (PORT, DBPASS, DBHOST, DBPORT, DBUSER, CollegeScheudlerDBName, JWTEncryptionToken)
+- run node index.js
 
-### MySQL Server
-- Create .env file with MYSQLPASS, MYSQL_USERNAME environment variables set to access you local mysql server
-- run the `create_database.sql` script in your sql server.
-- run `node mysql_app.js` to run the application and use it on `localhost:3000`
-
-It can be tedius to make your own dataset. So to use the dataset I used, the databaseClone folder has the entire database in JSON and BSON format. Use the following command in your linux terminal(with the mongodb server running) (you will need to have `mongodb-tools-bin` installed)
-`mongorestore --drop -d collegeScheduler -c users /path/to/user.bson`.
-Now goto your mongodb database and change username field for all documents to email. 
-
-To load the data into the sql server, run `node mongodb_json_to_sql.js`. In the mongodb_json_to_sql.js change the first parameter of the main call to the university_id of your sql record on which you wanna load the data.
-
-
-Now use the username: raghkum2000@gmail.com and password:12345 to play with the thapar even semester 2020-2021 dataset(see the section_TT.pdf to see the bases)
+### Do not use this in production, there no row level security so any user can hit the delete end point to delete any resource irrgardless of if it belongs to them or not. 
 
 * * *
 

@@ -3,7 +3,7 @@ configure_dotnev();
 import express from "express";
 import path from "path";
 import bodyParser from "body-parser";
-import {  college_scheduler_connection, web_telemetry_connection } from "./src/connections";
+import {  college_scheduler_connection } from "./src/connections";
 import { Authenticate, LoginRoute, RegisterRoute } from "./src/college scheduler/auth";
 import { async_get_query } from "./src/utils/db";
 import { SetParameter } from "./src/college scheduler/parameter";
@@ -18,7 +18,6 @@ import { GetSchedule, GetUserObject, PostSchedule } from "./src/college schedule
 const cookieparse = require("cookie-parser")
 
 
-web_telemetry_connection.connect();
 
 
 

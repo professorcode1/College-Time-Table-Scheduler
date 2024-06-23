@@ -29,7 +29,6 @@ const Period_1 = require("./src/college scheduler/Period");
 const Schedule_1 = require("./src/college scheduler/Schedule");
 // @ts-ignore
 const cookieparse = require("cookie-parser");
-connections_1.web_telemetry_connection.connect();
 const app = (0, express_1.default)();
 // var cors = require('cors');
 // app.use(cors({

@@ -8,7 +8,7 @@ import * as React from "react";
 import axios from "axios";
 import { URLBase } from "../utils/URLBase";
 import { setCourse } from "../redux/SelectedCourse";
-import { setScreen } from "../redux/screen";
+import {Link} from "react-router-dom"
 const SingleCourse:React.FC<{
     course:ICourse, 
 }> = (props) => {
@@ -52,16 +52,15 @@ const SingleCourse:React.FC<{
             >Delete</a>
             <button 
                 className="absolute bottom-0 right-0 pr-2 text-sm p-2 pl-1 text-blue-500 cursor-pointer"
-                onClick={()=>{
+            >
+                <Link to="/collegeSchduler/Period" onClick={()=>{
                     dispatcher(setCourse({
                         course_id:props.course._id,
                         professor_ids:taugthBy,
                         group_ids:taughtTo
                     }));
-                    dispatcher(setScreen("Period"))
-                }}
-            >
-                CRUD Periods
+                }}>CRUD Periods</Link>
+                
             </button>
         </div>
     );

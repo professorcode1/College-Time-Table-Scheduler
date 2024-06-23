@@ -7,7 +7,7 @@ async function insert_many_hlpr(
     right_values:number[],
     connection:Connection
 ) {
-    let sql_professor_ban_time_query = "INSERT INTO " + connection.escape(table_name_and_fields) + " VALUES "
+    let sql_professor_ban_time_query = "INSERT INTO " + table_name_and_fields + " VALUES "
     for (let right_value of right_values)
         sql_professor_ban_time_query += "(" + connection.escape(left_value) + "," + connection.escape(right_value) + "),";
     if (right_values.length > 0)

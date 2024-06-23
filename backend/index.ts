@@ -22,12 +22,12 @@ const cookieparse = require("cookie-parser")
 
 
 const app = express()
-// var cors = require('cors');
-// app.use(cors({
-//     credentials: true,
-//     origin: "http://localhost:3000",
-//     methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
-// }));
+var cors = require('cors');
+app.use(cors({
+    credentials: true,
+    origin: "http://localhost:3000",
+    methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
+}));
 
 const build_path = get_build_path();
 const waiting_ant_page_path = get_waiting_ant_path();
@@ -37,9 +37,7 @@ app.use('/collegeSchduler/static', express.static(path.join(build_path , 'static
 app.use(cookieparse());
 
 //
-app.get("/collegeSchduler", (req, res)=>{
-    res.sendFile(path.join(build_path, 'index.html'));
-})
+
 app.post("/collegeSchduler/login", LoginRoute);
 app.post("/collegeSchduler/register", RegisterRoute);
 app.get("/collegeSchduler/AmIAuthenticated", Authenticate, (req, res) => {
@@ -95,7 +93,11 @@ app.get("/collegeSchduler/viewSchedules", async (req, res)=>{
         res.status(500).send();
     }
 })
-app.get("/collegeSchduler/schedule/:userId", GetSchedule);
+app.put("/collegeSchduler/schedule/:userId", GetSchedule);
+
+app.get("/collegeSchduler(/[a-zA-Z]*)?", (req, res)=>{
+    res.sendFile(path.join(build_path, 'index.html'));
+})
 
 app.listen(process.env.PORT, ()=>{
     console.log(`server is listening is listening on  ${process.env.PORT}`)

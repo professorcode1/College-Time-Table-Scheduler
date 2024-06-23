@@ -1,12 +1,15 @@
 import * as React from "react"
 import LoginImage from "../assets/login.jpg"
 import { useAppDispatch } from "../redux/main";
-import { setScreen } from "../redux/screen";
+
 import axios from "axios";
 import { URLBase } from "../utils/URLBase";
 import Cookies from 'js-cookie';
+import { Link, useNavigate } from "react-router-dom";
 
 const Login:React.FC<{}> = ()=>{
+    const navigate = useNavigate();
+
     const [LoginFormState, setLoginFormState] = React.useState({
         email:"",
         password:""
@@ -20,7 +23,7 @@ const Login:React.FC<{}> = ()=>{
             
             if(loginRes.status === 200){
                 Cookies.set("token", loginRes.data)
-                dispatcher(setScreen("Homescreen"));
+                navigate("/collegeSchduler/Homescreen");
             }else{
                 throw Error();
             }
@@ -63,10 +66,10 @@ const Login:React.FC<{}> = ()=>{
                                 className="opacity-100 w-24 bg-green-800 text-white font-bold p-2 rounded mr-2"
                                 onClick={OnLoginSubmit}
                             >Submit</button>
-                            <button 
+                            <Link
                                 className="opacity-100 w-24 bg-sky-800 text-white font-bold p-2 rounded"
-                                onClick={()=>dispatcher(setScreen("Landing"))}
-                            >Back</button>
+                                to="/collegeSchduler"
+                            >Back</Link>
                         </div>
                     </div>
                 </div>

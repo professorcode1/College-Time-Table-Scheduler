@@ -3,16 +3,21 @@ import { async_get_query } from "../utils/db";
 import { college_scheduler_connection } from "../connections";
 import { extend_id_to_24_char, groupBy } from "./utils";
 
+async function user_have_scheduler(userId:any){
+    const [_, prof_views ] = await async_get_query(`CALL view_schedule(${college_scheduler_connection.escape(userId)})`, college_scheduler_connection);
+    return prof_views.length !== 0;
+}
+
 async function GetUserObject(req:Request,res:Response){
+    const {university_id} = (req as any).user;
     const [[user_Object],
         rooms_data, room_ban_times,
         groups_data, group_ban_times,
         professors_data, professor_ban_times, 
         courses_data, 
         period_data, period_group, period_ban_times] = await async_get_query(
-            `CALL entire_university_information(${college_scheduler_connection.escape(((req as any).user).university_id)})`, 
+            `CALL entire_university_information(${college_scheduler_connection.escape(university_id)})`, 
         college_scheduler_connection);
-
     const room_ban_times_grouped = groupBy(room_ban_times, x => x.room_id);
     const group_ban_times_grouped = groupBy(group_ban_times, x => x.group_id);
     const professor_ban_times_grouped = groupBy(professor_ban_times, x => x.professor_id);
@@ -68,6 +73,7 @@ async function GetUserObject(req:Request,res:Response){
     user_Object.groups = groups_data;
     user_Object.courses = courses_data;
     user_Object.periods = period_data;
+    user_Object.schedule_exists = await user_have_scheduler(university_id);
     res.send(user_Object);
 }
 
@@ -90,9 +96,9 @@ async function PostSchedule(req:Request, res:Response){
         await async_get_query("INSERT INTO period_coloring VALUES " + ColoringValue, college_scheduler_connection);
     }catch(err){
         console.log(err);
-        return res.send(err);
+        return res.send({success:false, err});
     }
-    return res.send("done");
+    return res.send({success:true, _id:(req as any).user.university_id});
 }
 async function GetSchedule(req:Request, res:Response){
     try {

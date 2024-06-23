@@ -13,10 +13,17 @@ exports.GetSchedule = exports.GetUserObject = exports.PostSchedule = void 0;
 const db_1 = require("../utils/db");
 const connections_1 = require("../connections");
 const utils_1 = require("./utils");
+function user_have_scheduler(userId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const [_, prof_views] = yield (0, db_1.async_get_query)(`CALL view_schedule(${connections_1.college_scheduler_connection.escape(userId)})`, connections_1.college_scheduler_connection);
+        return prof_views.length !== 0;
+    });
+}
 function GetUserObject(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
-        const [[user_Object], rooms_data, room_ban_times, groups_data, group_ban_times, professors_data, professor_ban_times, courses_data, period_data, period_group, period_ban_times] = yield (0, db_1.async_get_query)(`CALL entire_university_information(${connections_1.college_scheduler_connection.escape((req.user).university_id)})`, connections_1.college_scheduler_connection);
+        const { university_id } = req.user;
+        const [[user_Object], rooms_data, room_ban_times, groups_data, group_ban_times, professors_data, professor_ban_times, courses_data, period_data, period_group, period_ban_times] = yield (0, db_1.async_get_query)(`CALL entire_university_information(${connections_1.college_scheduler_connection.escape(university_id)})`, connections_1.college_scheduler_connection);
         const room_ban_times_grouped = (0, utils_1.groupBy)(room_ban_times, x => x.room_id);
         const group_ban_times_grouped = (0, utils_1.groupBy)(group_ban_times, x => x.group_id);
         const professor_ban_times_grouped = (0, utils_1.groupBy)(professor_ban_times, x => x.professor_id);
@@ -74,6 +81,7 @@ function GetUserObject(req, res) {
         user_Object.groups = groups_data;
         user_Object.courses = courses_data;
         user_Object.periods = period_data;
+        user_Object.schedule_exists = yield user_have_scheduler(university_id);
         res.send(user_Object);
     });
 }
@@ -99,9 +107,9 @@ function PostSchedule(req, res) {
         }
         catch (err) {
             console.log(err);
-            return res.send(err);
+            return res.send({ success: false, err });
         }
-        return res.send("done");
+        return res.send({ success: true, _id: req.user.university_id });
     });
 }
 exports.PostSchedule = PostSchedule;

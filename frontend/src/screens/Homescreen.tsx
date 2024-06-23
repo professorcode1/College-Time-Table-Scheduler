@@ -10,6 +10,7 @@ import CourseImage from "../assets/homepage_anchor_course.jpg";
 import GroupImage from "../assets/homepage_anchor_group.jpg";
 import ProfessorImage from "../assets/homepage_anchor_prof.jpg";
 import RoomImage from "../assets/homepage_anchor_room.jpg"
+import { Link, useNavigate } from "react-router-dom";
 
 const HowItWorks:React.FC<{}> = () => {
 return (
@@ -50,20 +51,24 @@ return (
 }
 const Homescreen:React.FC<{}> = () => {
     const dispatcher = useAppDispatch();
+    const navigation = useNavigate();
     React.useEffect(()=>{
         (async ()=>{
             try {
                 dispatcher(setWaiting(true))
+                const user = (await axios.get(`${URLBase}/userDatabaseObject`, {
+                    withCredentials:true
+                })).data;
+                console.log('user', user)
                 dispatcher(setUser(
-                    (await axios.get(`${URLBase}/userDatabaseObject`, {
-                        withCredentials:true
-                    })).data
+                    user
                 ))
                 dispatcher(setWaiting(false));
             } catch (error) {
                 console.log(error)
                 dispatcher(setWaiting(false));
                 alert("some error occured in fetching your user data. Please reload page/try loging in again");
+                navigation("/collegeSchduler/Login")
             }
         })()
     }, [])
@@ -82,22 +87,31 @@ const Homescreen:React.FC<{}> = () => {
                     </p>
                     <div className="w-screen h-[90%] flex">
                         <div className="h-full w-1/2 grid grid-cols-2">
-                            <div className="p-1 bg-white rounded-md m-1 cursor-pointer">
-                                <img className="" src={CourseImage} />
-                                <p>Course</p>
-                            </div>
+
+                            <Link to="/collegeSchduler/Group">
                             <div className="p-1 bg-white rounded-md m-1 cursor-pointer">
                                 <img className="" src={GroupImage} />
                                 <p>Group</p>
                             </div>
+                            </Link>
+                            <Link to="/collegeSchduler/Professor">
                             <div className="p-1 bg-white rounded-md m-1 cursor-pointer">
                                 <img className="" src={ProfessorImage} />
                                 <p>Professor</p>
                             </div>
+                            </Link>
+                            <Link to="/collegeSchduler/Room">
                             <div className="p-1 bg-white rounded-md m-1 cursor-pointer">
                                 <img className="" src={RoomImage} />
                                 <p>Room</p>
                             </div>
+                            </Link>
+                            <Link to="/collegeSchduler/Course">
+                            <div className="p-1 bg-white rounded-md m-1 cursor-pointer">
+                                <img className="" src={CourseImage} />
+                                <p>Course</p>
+                            </div>
+                            </Link>
                         </div>
                         <div className="h-full w-1/2 p-2">
                             <div className="bg-white opacity-70 h-full w-full p-1 pb-2 rounded-lg overflow-auto ">

@@ -42,6 +42,7 @@ interface IUser{
     groups:IGroup[]
     courses:ICourse[]
     periods:IPeriod[]
+    schedule_exists:boolean
 }
 
 export type {IUser, IRoom,IProfessor,IGroup,ICourse,IPeriod}

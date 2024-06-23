@@ -1,10 +1,14 @@
 import * as React from "react";
 import { useAppDispatch, useAppSelector } from "../redux/main";
-import { setScreen } from "../redux/screen";
+import { Link } from "react-router-dom";
 
 const Navbar:React.FC<{}> = () => {
     const dispatcher = useAppDispatch();
-    const number_of_periods = useAppSelector(s => s.user?.periods.length)
+    const user = useAppSelector(s => s.user);
+    if(user === null){
+        return null;
+    }
+    const number_of_periods = user.periods.length;
     return (
         <div style={{
             zIndex:10000
@@ -12,33 +16,38 @@ const Navbar:React.FC<{}> = () => {
         className="flex items-center justify-between fixed top-0 left-0 bg-black text-white py-2  w-screen"
         >
             <div className="flex items-around">
-                <p 
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("Homescreen"))}
-                >Homepage</p>
-                <p 
+                    to="/collegeSchduler/Homescreen"
+                >Homepage</Link>
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("DaysHours"))}
-                >Days/Hours</p>
-                <p 
+                    to="/collegeSchduler/DaysHours"
+                >Days/Hours</Link>
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("Professor"))}
-                >Professor</p>
-                <p 
+                    to="/collegeSchduler/Professor"
+                >Professor</Link>
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("Group"))}
-                >Group</p>
-                <p 
+                    to="/collegeSchduler/Group"
+                >Group</Link>
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("Room"))}
-                >Room</p>
-                <p 
+                    to="/collegeSchduler/Room"
+                >Room</Link>
+                <Link 
                     className="px-2 cursor-pointer"
-                    onClick={()=>dispatcher(setScreen("Course"))}
-                >Course</p>
+                    to="/collegeSchduler/Course"
+                >Course</Link>
             </div>
             <div>
-                <p
+                { user.schedule_exists && <Link 
+                    className="px-2 cursor-pointer"
+                    to={`/collegeSchduler/Schedule/${user._id}`}
+                >View Schedule
+                </Link>}
+                <a
                     className="px-2 cursor-pointer"
                     onClick={()=>{
                         if(number_of_periods === 0){
@@ -48,7 +57,7 @@ const Navbar:React.FC<{}> = () => {
                     }}
                 >
                     Genereate Schedule
-                </p>
+                </a>
             </div>
         </div>
     )

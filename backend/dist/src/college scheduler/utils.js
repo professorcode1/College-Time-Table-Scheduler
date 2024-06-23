@@ -13,7 +13,7 @@ exports.groupBy = exports.extend_id_to_24_char = exports.insert_many_hlpr = void
 const db_1 = require("../utils/db");
 function insert_many_hlpr(table_name_and_fields, left_value, right_values, connection) {
     return __awaiter(this, void 0, void 0, function* () {
-        let sql_professor_ban_time_query = "INSERT INTO " + connection.escape(table_name_and_fields) + " VALUES ";
+        let sql_professor_ban_time_query = "INSERT INTO " + table_name_and_fields + " VALUES ";
         for (let right_value of right_values)
             sql_professor_ban_time_query += "(" + connection.escape(left_value) + "," + connection.escape(right_value) + "),";
         if (right_values.length > 0)

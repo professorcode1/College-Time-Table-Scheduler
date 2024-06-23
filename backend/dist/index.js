@@ -30,12 +30,12 @@ const Schedule_1 = require("./src/college scheduler/Schedule");
 // @ts-ignore
 const cookieparse = require("cookie-parser");
 const app = (0, express_1.default)();
-// var cors = require('cors');
-// app.use(cors({
-//     credentials: true,
-//     origin: "http://localhost:3000",
-//     methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
-// }));
+var cors = require('cors');
+app.use(cors({
+    credentials: true,
+    origin: "http://localhost:3000",
+    methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD"],
+}));
 const build_path = (0, configDotEnv_1.get_build_path)();
 const waiting_ant_page_path = (0, configDotEnv_1.get_waiting_ant_path)();
 app.use(express_1.default.json());
@@ -43,9 +43,6 @@ app.use(body_parser_1.default.urlencoded({ extended: true }));
 app.use('/collegeSchduler/static', express_1.default.static(path_1.default.join(build_path, 'static')));
 app.use(cookieparse());
 //
-app.get("/collegeSchduler", (req, res) => {
-    res.sendFile(path_1.default.join(build_path, 'index.html'));
-});
 app.post("/collegeSchduler/login", auth_1.LoginRoute);
 app.post("/collegeSchduler/register", auth_1.RegisterRoute);
 app.get("/collegeSchduler/AmIAuthenticated", auth_1.Authenticate, (req, res) => {
@@ -96,7 +93,10 @@ app.get("/collegeSchduler/viewSchedules", (req, res) => __awaiter(void 0, void 0
         res.status(500).send();
     }
 }));
-app.get("/collegeSchduler/schedule/:userId", Schedule_1.GetSchedule);
+app.put("/collegeSchduler/schedule/:userId", Schedule_1.GetSchedule);
+app.get("/collegeSchduler(/[a-zA-Z]*)?", (req, res) => {
+    res.sendFile(path_1.default.join(build_path, 'index.html'));
+});
 app.listen(process.env.PORT, () => {
     console.log(`server is listening is listening on  ${process.env.PORT}`);
 });

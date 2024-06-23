@@ -30,7 +30,7 @@ const SinglePeriod:React.FC<{
             <p>Parent Course: {courseName}</p>
             <p>Taught By : {profName }</p>
             <p>Taught To: {groups_attending.join(", ")}</p>
-            <p>Period Anti times:{JSON.stringify(period.periodAntiTime)}</p>
+            <p className="truncate">Period Anti times:{JSON.stringify(period.periodAntiTime)}</p>
             <p>Period Set Time:{period.periodTime !== -1 ? period.periodTime : "Null"}</p>
             <p>Period Length:{period.periodLength}</p>
             <p>Period Frequency:{period.periodFrequency}</p>

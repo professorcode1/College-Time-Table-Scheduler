@@ -1,10 +1,10 @@
 import * as React from "react"
 import { useAppDispatch } from "../redux/main";
-import { setScreen } from "../redux/screen";
 import RegisterImage from "../assets/register_img.jpeg"
 import axios from "axios";
 import { URLBase } from "../utils/URLBase";
 import Cookies from "js-cookie";
+import { Link, useNavigate } from "react-router-dom";
 const Register:React.FC<{}> = ()=>{
     const [LoginFormState, setLoginFormState] = React.useState({
         instituteName:"",
@@ -12,13 +12,13 @@ const Register:React.FC<{}> = ()=>{
         email:"",
         useSample:false
     });
-    const dispatcher = useAppDispatch();
+    const navigate = useNavigate();
     const OnSubmit = async () => {
         try {
             const register_result = await axios.post(`${URLBase}/register`, LoginFormState)
             if(register_result.status === 200){
                 Cookies.set("token", register_result.data)
-                dispatcher(setScreen("Homescreen"));
+                navigate("/collegeSchduler/Homescreen");
             }else{
                 throw Error(register_result.data);
             }
@@ -80,10 +80,10 @@ const Register:React.FC<{}> = ()=>{
                                 className="opacity-100 w-24 bg-green-800 text-white font-bold p-2 rounded mr-2"
                                 onClick={OnSubmit}
                             >Submit</button>
-                            <button 
+                            <Link 
                                 className="opacity-100 w-24 bg-sky-800 text-white font-bold p-2 rounded"
-                                onClick={()=>dispatcher(setScreen("Landing"))}
-                            >Back</button>
+                                to="/collegeSchduler"
+                            >Back</Link>
                         </div>
                     </div>
                 </div>

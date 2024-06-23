@@ -1,5 +1,4 @@
 node_modules
-dist
 .env
 build/static/css
 build/static/js

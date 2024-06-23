@@ -1,0 +1,25 @@
+{
+  "files": {
+    "main.css": "/collegeSchduler/static/css/main.c992c0a1.css",
+    "main.js": "/collegeSchduler/static/js/main.dbf5d58c.js",
+    "static/js/453.f9f95ad4.chunk.js": "/collegeSchduler/static/js/453.f9f95ad4.chunk.js",
+    "static/media/login.jpg": "/collegeSchduler/static/media/login.859b02192326f95b14c8.jpg",
+    "static/media/homepage.jpg": "/collegeSchduler/static/media/homepage.0d6db3240e89b64c21f8.jpg",
+    "static/media/login_link_in_index.jpeg": "/collegeSchduler/static/media/login_link_in_index.9707cc70ec0b9c44a72d.jpeg",
+    "static/media/register_link_in_index.jpeg": "/collegeSchduler/static/media/register_link_in_index.f672408fef4995e042a4.jpeg",
+    "static/media/register_img.jpeg": "/collegeSchduler/static/media/register_img.5474affa98fce2bb1269.jpeg",
+    "static/media/homepage_anchor_group.jpg": "/collegeSchduler/static/media/homepage_anchor_group.1f4477154eafe66b9f66.jpg",
+    "static/media/viewSchedule_link_index.jpeg": "/collegeSchduler/static/media/viewSchedule_link_index.aa020e76c2e5fa050d31.jpeg",
+    "static/media/homepage_anchor_course.jpg": "/collegeSchduler/static/media/homepage_anchor_course.eefd91da6f32db9a7bcc.jpg",
+    "static/media/homepage_anchor_prof.jpg": "/collegeSchduler/static/media/homepage_anchor_prof.2e64202087f18c4bd2d2.jpg",
+    "static/media/homepage_anchor_room.jpg": "/collegeSchduler/static/media/homepage_anchor_room.6d96a39909cd1d41e030.jpg",
+    "index.html": "/collegeSchduler/index.html",
+    "main.c992c0a1.css.map": "/collegeSchduler/static/css/main.c992c0a1.css.map",
+    "main.dbf5d58c.js.map": "/collegeSchduler/static/js/main.dbf5d58c.js.map",
+    "453.f9f95ad4.chunk.js.map": "/collegeSchduler/static/js/453.f9f95ad4.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c992c0a1.css",
+    "static/js/main.dbf5d58c.js"
+  ]
+}

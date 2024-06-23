@@ -81,8 +81,13 @@ async function PostSchedule(req:Request, res:Response){
             let color = coloring[period_Info];
             sql_string_r += `(${period_id}, ${length_value}, ${frequency_value}, ${color}),`;
         }
+        const ValidPeriodColoringValuesRegexp = /^(\(\d+,\s\d+,\s\d+,\s\d+\)(,?))*$/;
+        const ColoringValue = sql_string_r.substring(0, sql_string_r.length - 1);
+        if(!ValidPeriodColoringValuesRegexp.test(ColoringValue)){
+            return res.status(401).send("Broh the source code it literally on github what you sql injecting this for!?!?!?!😭😭")
+        }
         await async_get_query(`CALL delete_university_schedule(${college_scheduler_connection.escape((req as any).user.university_id)})`, college_scheduler_connection);
-        await async_get_query("INSERT INTO period_coloring VALUES " + college_scheduler_connection.escape(sql_string_r.substring(0, sql_string_r.length - 1)), college_scheduler_connection);
+        await async_get_query("INSERT INTO period_coloring VALUES " + ColoringValue, college_scheduler_connection);
     }catch(err){
         console.log(err);
         return res.send(err);
